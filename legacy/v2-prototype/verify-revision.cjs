@@ -1,0 +1,18 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const nodes=new Map();let html='';
+function element(){return{dataset:{},value:'',textContent:'',classList:{toggle(){},add(){},remove(){}},querySelectorAll(){return[]},close(){},showModal(){},scrollHeight:100,scrollTop:0,clientHeight:40};}
+const main=element();Object.defineProperty(main,'innerHTML',{get(){return html},set(v){html=v;nodes.clear();for(const id of v.matchAll(/id="([^"]+)"/g))nodes.set(id[1],element());}});
+const fixed={'main':main,'status':element(),'backup-save':element(),'backup-load':element(),'backup-file':element()};
+const doc={getElementById(id){return fixed[id]||nodes.get(id)||null},querySelectorAll(){return[]},addEventListener(){},querySelector(){return {focus(){}}}};
+const ctx={document:doc,console,localStorage:{getItem(){return null},setItem(){}},crypto:require('crypto').webcrypto,Blob,TextEncoder,URL,setTimeout,clearInterval,setInterval,FormData:class{constructor(f){this.data=f.data}get(k){return this.data[k]??''}},matchMedia(){return{matches:true}}};vm.createContext(ctx);
+for(const file of ['core.js','portraits.js','zip.js'])vm.runInContext(fs.readFileSync(file,'utf8'),ctx);
+let app=fs.readFileSync('app.js','utf8'),pos=app.lastIndexOf('render();');app=app.slice(0,pos)+`globalThis.testApp={state:()=>s,setPage:p=>{page=p;render()},mode:m=>{modeChoice=m},next:()=>nextEvent(page),stop:stopPlayback};\n`+app.slice(pos);vm.runInContext(app,ctx);
+const a=ctx.testApp,api=ctx.YanZhi;
+assert(html.includes('教学研讨'));assert(html.includes('module-bridge'));
+for(const mode of ['cooperate','challenge','mixed','group_cooperate','group_debate','reflection']){a.mode(mode);a.setPage('seminar');for(let i=0;i<8;i++)a.next();const r=a.state().runs.at(-1);assert.equal(r.interaction_mode,mode);assert.equal(a.state().events.filter(e=>e.run_id===r.run_id).length,8);api.finish(a.state(),r.run_id)}
+a.setPage('classroom');nodes.get('join').onclick();nodes.get('participation-form').data={message:'请给出判断依据',role:'学生'};nodes.get('participation-form').onsubmit({preventDefault(){}});const es=a.state().events,reply=es.at(-1),human=es.at(-2);assert.equal(reply.reply_to,human.event_id);assert.equal(human.source,'human_input');assert(Number.isFinite(human.input_duration_ms));
+api.rate(a.state(),{event_id:human.event_id,rater_code:'R01',verdict:'not_assessed',score:null,rubric_scores:{evidence_use:3,reflection_revision:null},note:'依据'});const ar=api.transferArtifact(a.state(),a.state().artifacts[0].artifact_id,'classroom',true);assert(ar.parent_id);api.validate(a.state());
+a.setPage('export');assert.equal(typeof nodes.get('make-bundle').onclick,'function');nodes.get('include-text').value='yes';nodes.get('export-scope').value='all';nodes.get('make-bundle').onclick();assert(html.includes('rubric.csv'));assert(html.includes('metrics.csv'));assert.equal(typeof nodes.get('zip-download').onclick,'function');
+const b=api.bundle(a.state(),{includeText:true,scope:'all'});assert(b.files['ratings.csv'].includes('3'));assert(b.files['rubric.csv'].includes('专业准确性'));assert(b.files['events.csv'].includes('input_duration_ms'));assert(b.files['runs.csv'].includes('duration_ms'));assert(!b.files['rubric.csv'].includes('????'));ctx.ResearchZip(b.files).arrayBuffer().then(buf=>fs.writeFileSync('verification-export.zip',Buffer.from(buf)));
+for(const p of ['home','seminar','classroom','export','lineage','settings']){a.setPage(p);assert(html.length>100)}
+console.log('PASS: 6 modes / human reply linkage / input time / rubric scores / module transfer / export handlers / export files / all routes');a.stop();

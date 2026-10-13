@@ -1,0 +1,12 @@
+data/
+data-szsx/
+*.db
+*.db-wal
+*.db-shm
+master.key
+.env
+szsx.env
+node_modules/
+.local/
+public/vendor/mediapipe/
+试用账号.txt

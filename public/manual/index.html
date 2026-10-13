@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>演示操作手册 · 研思智境</title>
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<style>
+  :root { --red: #a6192e; --red2: #c62a3d; --gold: #b98a47; --ink: #2b1d1a; --muted: #6e5a54; --line: #ecdcd0; --bg: #fbf7f2; --card: #fff; --blue: #1f5fa8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.75 "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+  a { color: var(--red); }
+  header.top { background: linear-gradient(120deg, #7d1628, #a6192e 55%, #c62a3d); color: #fff; padding: 36px 20px 30px; }
+  header.top .in, main { max-width: 1080px; margin: 0 auto; }
+  header.top h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: 2px; }
+  header.top p { margin: 0; opacity: .92; }
+  main { padding: 20px 16px 60px; }
+  nav.toc { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 18px 0 8px; }
+  nav.toc a { display: block; text-decoration: none; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; color: var(--ink); box-shadow: 0 6px 18px #7d162810; }
+  nav.toc a b { display: block; color: var(--red); font-size: 17px; }
+  nav.toc a span { color: var(--muted); font-size: 14px; }
+  h2 { font-size: 24px; margin: 46px 0 6px; padding-bottom: 8px; border-bottom: 3px solid var(--red); }
+  h2 small { font-size: 15px; color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .lead { color: var(--muted); margin: 6px 0 18px; }
+  .box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin: 14px 0; }
+  .prep ol { margin: 0; padding-left: 22px; }
+  .files { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .files a { text-decoration: none; font-size: 14px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--gold); background: #fff6e8; color: #7a4f14; }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0 4px; font-size: 15px; }
+  .flow span { padding: 6px 12px; border-radius: 10px; background: #fff; border: 1px solid var(--line); }
+  .flow .s { border-color: #e7b6be; background: #fdeef0; color: var(--red); font-weight: 700; }
+  .flow .c { border-color: #b7cff0; background: #eef5ff; color: var(--blue); font-weight: 700; }
+  .flow i { font-style: normal; color: var(--gold); font-weight: 700; }
+  .step { display: grid; grid-template-columns: 44px 1fr; gap: 14px; margin: 26px 0; }
+  .num { width: 44px; height: 44px; border-radius: 50%; background: var(--red); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 18px; box-shadow: 0 4px 12px #a6192e44; }
+  .num.c { background: var(--blue); box-shadow: 0 4px 12px #1f5fa844; }
+  .num.g { background: var(--gold); box-shadow: 0 4px 12px #b98a4744; }
+  .step h3 { margin: 6px 0 4px; font-size: 19px; }
+  .step .do { margin: 4px 0 8px; padding-left: 20px; }
+  .step .do li { margin: 2px 0; }
+  .step .do b { color: var(--red); }
+  .shot { display: block; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 28px #2b1d1a1f; background: #fff; }
+  .shot img { display: block; width: 100%; height: auto; }
+  .say { margin-top: 10px; font-size: 15px; background: #fff8ec; border-left: 4px solid var(--gold); padding: 8px 12px; border-radius: 0 10px 10px 0; }
+  .say::before { content: "讲解要点　"; color: var(--gold); font-weight: 700; }
+  .tip { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; background: #fff; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #faf1e7; color: #7a4f14; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; padding: 24px 16px 40px; }
+  @media (max-width: 720px) { .step { grid-template-columns: 1fr; } .num { width: 38px; height: 38px; } .pair { grid-template-columns: 1fr; } header.top h1 { font-size: 24px; } }
+  @media print { header.top { background: #a6192e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .step { break-inside: avoid; } a.shot { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="in">
+  <h1>演示操作手册 · 一门课完整演示</h1>
+  <p>研思智境 ·“研—演—评—改”多智能体数字教研实验工坊　|　示例课程：电工电子技术 ·《电路的基本概念》</p>
+</div></header>
+<main>
+  <p class="lead">不逐个介绍功能，只沿三条主线走完一门课。一份课件会在<b style="color:var(--red)">研课场</b>和<b style="color:var(--blue)">演课场</b>之间来回两次。全程用“模拟演示”，不调用大模型，也不扣积分；三条主线共约 25 分钟。截图来自平台的真实运行。</p>
+  <div class="flow"><span>讲义</span><i>→</i><span class="s">大纲</span><i>→</i><span class="s">课件 v1</span><i>→</i><span class="c">第一次上课</span><i>→</i><span class="c">课堂反馈</span><i>→</i><span class="s">修订课件</span><i>→</i><span class="c">第二次上课（真实班级画像）</span><i>→</i><span>评分 · 量规 · 数据导出</span></div>
+  <nav class="toc">
+    <a href="#prep"><b>演示前准备</b><span>2 分钟 · 登录、选模式、下载演示材料</span></a>
+    <a href="#line1"><b>主线一　大纲 → 课件 → 课堂</b><span>约 10 分钟 · 步骤 1—10</span></a>
+    <a href="#line2"><b>主线二　班级与智能体数据</b><span>约 7 分钟 · 步骤 11—15</span></a>
+    <a href="#line3"><b>主线三　量规、评分与数据</b><span>约 8 分钟 · 步骤 16—21</span></a>
+    <a href="#sisi"><b>随时问思思 · 账号设置</b><span>数字客服、头像、退出与清空缓存</span></a>
+  </nav>
+
+  <h2 id="prep">演示前准备 <small>2 分钟</small></h2>
+  <div class="box prep"><ol>
+    <li>浏览器打开 <b>http://127.0.0.1:8787/</b>，用教师账号登录。</li>
+    <li>研课场、演课场页面顶部都有运行方式开关，选 <b>“模拟演示”</b>：不调用大模型、不扣积分，几秒就能出结果。需要展示真实大模型时再切到“DeepSeek API 运行”。</li>
+    <li>下载下面的演示材料，放在桌面备用。<b>班级画像、名册、作答都是演示用的虚构数据</b>，不能当作真实研究数据。</li>
+  </ol>
+  <div class="files">
+    <a href="/manual/demo/电工电子技术讲义.txt" download>① 电工电子技术讲义.txt</a>
+    <a href="/manual/demo/专业教师说课稿-演示用示例.txt" download>② 专业教师说课稿（训练教师）</a>
+    <a href="/manual/demo/电气2401班画像-演示用虚构数据.csv" download>③ 电气2401班画像.csv（40 人）</a>
+    <a href="/manual/demo/课件思政融入量规-演示用.json" download>④ 自定义量规.json</a>
+    <a href="/manual/demo/研究名册-演示用虚构数据.csv" download>⑤ 研究名册.csv</a>
+    <a href="/manual/demo/学习体验量表题项-演示用.csv" download>⑥ 量表题项.csv</a>
+    <a href="/manual/demo/学习体验作答-演示用虚构数据.csv" download>⑦ 量表作答.csv</a>
+  </div></div>
+  <a class="shot" href="/manual/img/01-home.jpg" target="_blank"><img src="/manual/img/01-home.jpg" alt="首页：研课场与演课场，中间的箭头表示两者之间的流转" loading="lazy"></a>
+  <p class="tip">首页左边是研课场（备课、研讨），右边是演课场（模拟上课），中间的箭头表示产物在两者之间流转。右上角 📖 可以随时打开本手册；右下角的 <b>思思</b> 可以随时回答平台使用问题（见文末“随时问思思”）。</p>
+
+  <h2 id="line1">主线一　从大纲到课件，再到课堂 <small>研课场 ⇄ 演课场 · 约 10 分钟</small></h2>
+
+  <div class="step"><div class="num">1</div><div>
+    <h3>进入研课场，点“新建任务”</h3>
+    <ul class="do"><li>顶部导航点 <b>研课场</b>；确认运行方式是 <b>模拟演示</b>。</li><li>点右上角 <b>新建任务</b>。</li></ul>
+    <a class="shot" href="/manual/img/02-seminar-new.jpg" target="_blank"><img src="/manual/img/02-seminar-new.jpg" alt="研课场页面，新建任务按钮" loading="lazy"></a>
+  </div></div>
+
+  <div class="step"><div class="num">2</div><div>
+    <h3>导入讲义，系统自动识别课程和知识点</h3>
+    <ul class="do"><li>点 <b>⬆ 上传讲义</b>，选择材料 ①《电工电子技术讲义.txt》。也可以点“或粘贴文字”直接粘贴。</li><li>系统识别出课程名称、专业、单元和 7 个有定义的知识点；默认勾选前 4 个作为重点研讨，可以改。</li></ul>
+    <a class="shot" href="/manual/img/03-task-import.jpg" target="_blank"><img src="/manual/img/03-task-import.jpg" alt="导入讲义后的识别结果和知识点" loading="lazy"></a>
+    <div class="say">平台只依据你导入的材料工作，每个知识点都标注了出自哪个文件哪一章；手机号、身份证号等个人信息会自动隐去。</div>
+  </div></div>
+
+  <div class="step"><div class="num">3</div><div>
+    <h3>勾选“大纲”和“课件”，主成果选“大纲”，开始执行</h3>
+    <ul class="do"><li>“要生成的成果”勾选 <b>思政版教学大纲</b> 和 <b>课程思政课件</b>，取消其他勾选。</li><li>“主成果”选 <b>思政版教学大纲</b>：教研组先围绕知识点研讨出大纲，再沿用同一批研讨结论生成课件。</li><li>“班级（学情依据）”先用默认；主线二导入真实班级画像后可以在这里选择。点 <b>开始执行</b>。</li></ul>
+    <a class="shot" href="/manual/img/04-task-outputs.jpg" target="_blank"><img src="/manual/img/04-task-outputs.jpg" alt="选择要生成的成果与主成果" loading="lazy"></a>
+  </div></div>
+
+  <div class="step"><div class="num">4</div><div>
+    <h3>看任务自动完成：大纲 → 知识图谱 → 课件</h3>
+    <ul class="do"><li>右侧“研讨任务进度”依次打勾，每一步下方的金色标签就是生成的成果，点标签即可打开。</li><li>演示时可以指着下方会议室里的 8 位教师智能体，说明谁负责哪一段。</li><li>觉得画面太满，点顶部 <b>简洁视图</b>：只留研讨对话、任务进度和播放器；再点一次“完整视图”恢复。</li></ul>
+    <a class="shot" href="/manual/img/05-task-done.jpg" target="_blank"><img src="/manual/img/05-task-done.jpg" alt="任务进度全部完成，列出大纲、图谱、课件" loading="lazy"></a>
+  </div></div>
+
+  <div class="step"><div class="num">5</div><div>
+    <h3>在产物库里看这门课：大纲在“课程层”，课件在“课堂层”</h3>
+    <ul class="do"><li>点 <b>产物库</b>，默认按“课程 → 层级”分组；搜索框输入“电工电子”只看这门课。</li><li>打开大纲，可以看到“学情分析”“三类目标”等段落，都能直接编辑。</li></ul>
+    <div class="pair">
+      <a class="shot" href="/manual/img/06-library.jpg" target="_blank"><img src="/manual/img/06-library.jpg" alt="产物库按课程和层级分组" loading="lazy"></a>
+      <a class="shot" href="/manual/img/07-syllabus.jpg" target="_blank"><img src="/manual/img/07-syllabus.jpg" alt="思政版教学大纲的学情分析段落" loading="lazy"></a>
+    </div>
+  </div></div>
+
+  <div class="step"><div class="num c">6</div><div>
+    <h3>打开课件，点“送到演课场上课 →”（第一次切换）</h3>
+    <ul class="do"><li>在产物库打开 <b>电工电子技术·课程思政课件</b>，右侧点金色的 <b>送到演课场上课 →</b>，确认。</li><li>系统把课件设为当前产物，导入演课场，并直接跳转过去。</li></ul>
+    <a class="shot" href="/manual/img/08-courseware.jpg" target="_blank"><img src="/manual/img/08-courseware.jpg" alt="课件编辑页右侧的送到演课场上课按钮" loading="lazy"></a>
+    <p class="tip">每张表格右上角都有“导入表格 / 导出表格”，可以直接在 Excel 里改好再导回来。</p>
+  </div></div>
+
+  <div class="step"><div class="num c">7</div><div>
+    <h3>在演课场点 ▶ 开始上课</h3>
+    <ul class="do"><li>顶部显示“课件 · 研课场 v1”“来自研课场”，说明导入成功。</li><li>默认 <b>10×</b> 倍速（想更快选 20×），点 <b>▶ 开始上课</b>。</li></ul>
+    <a class="shot" href="/manual/img/09-classroom-ready.jpg" target="_blank"><img src="/manual/img/09-classroom-ready.jpg" alt="演课场开始上课按钮与班级选择" loading="lazy"></a>
+    <a class="shot" href="/manual/img/10-classroom-live.jpg" target="_blank" style="margin-top:10px"><img src="/manual/img/10-classroom-live.jpg" alt="上课中：学生提问质疑、各组活跃度" loading="lazy"></a>
+    <div class="say">40 名学生智能体分 8 组，会自主提问、质疑。右上是本节课的实时数据；可以点“随机点名”“发起全班讨论”，也可以点“参与课堂”以老师或学生身份插话。</div>
+  </div></div>
+
+  <div class="step"><div class="num c">8</div><div>
+    <h3>下课 → 生成课堂反馈 → 返回研课场继续改进（第二次切换）</h3>
+    <ul class="do"><li>点 <b>■ 下课</b>，再点右上 <b>生成课堂反馈</b>。</li><li>弹窗里点 <b>返回研课场继续改进 →</b>：反馈自动带回研课场，教研组立刻开始依据反馈修订这份课件。</li></ul>
+    <a class="shot" href="/manual/img/11-feedback.jpg" target="_blank"><img src="/manual/img/11-feedback.jpg" alt="课堂反馈弹窗，返回研课场继续改进按钮" loading="lazy"></a>
+  </div></div>
+
+  <div class="step"><div class="num">9</div><div>
+    <h3>教研组依据反馈修订，点“确认为当前产物”</h3>
+    <ul class="do"><li>对话区可以看到“依据课堂反馈修订‘页面结构’”，修改点和依据的课堂事件都有记录。</li><li>右侧顶部点 <b>确认为当前产物</b>，修订版就成为研课场的当前课件。</li></ul>
+    <div class="pair">
+      <a class="shot" href="/manual/img/12-revise-running.jpg" target="_blank"><img src="/manual/img/12-revise-running.jpg" alt="依据课堂反馈修订课件" loading="lazy"></a>
+      <a class="shot" href="/manual/img/13-accept.jpg" target="_blank"><img src="/manual/img/13-accept.jpg" alt="确认为当前产物按钮" loading="lazy"></a>
+    </div>
+  </div></div>
+
+  <div class="step"><div class="num">10</div><div>
+    <h3>看版本链：v1 研课场 → v2 演课场 → v3 修订版</h3>
+    <ul class="do"><li>打开修订后的课件，展开右侧 <b>产物详情 / 来源</b>，可以看到这份课件在两个场之间往返的完整记录。</li><li>版本号在两个场之间连续编号，旧版本不会被覆盖；演课场的标签直接写明它来自研课场的哪个版本（如“课件 · 研课场 v3”）。</li></ul>
+    <a class="shot" href="/manual/img/14-courseware-v2.jpg" target="_blank"><img src="/manual/img/14-courseware-v2.jpg" alt="同源版本 v1 v2 v3" loading="lazy"></a>
+    <div class="say">这就是“研—演—评—改”的一个闭环：研课场备课，演课场预演，课堂反馈回到研课场修订。接下来换上真实班级和训练过的教师，再上一次课。</div>
+  </div></div>
+
+  <h2 id="line2">主线二　选定班级，训练教师与学生智能体 <small>约 7 分钟</small></h2>
+
+  <div class="step"><div class="num g">11</div><div>
+    <h3>智能体中心：选一位教师，点“导入数据训练”</h3>
+    <ul class="do"><li>顶部点 <b>智能体</b>。8 位教师有固定姓名和职责，另有 2 位可以自定义形象和提示词。</li><li>所有人物都以 <b>3D 水晶圆球</b> 中的仿真形象出现：教师为暖金玻璃球，学生为冰晶蓝玻璃球，不需要上传任何照片。</li><li>在 <b>苏婉清 · 专业教师</b> 卡片上点 <b>导入数据训练</b>。</li></ul>
+    <a class="shot" href="/manual/img/15-agents.jpg" target="_blank"><img src="/manual/img/15-agents.jpg" alt="智能体中心教师卡片" loading="lazy"></a>
+  </div></div>
+
+  <div class="step"><div class="num g">12</div><div>
+    <h3>阅读采集原则，选择资料，开始训练</h3>
+    <ul class="do"><li>先读 8 条数据采集原则并勾选确认，再选择材料 ②《专业教师说课稿》，点 <b>开始训练</b>。</li><li>8 个阶段依次完成：采集校验 → 文本抽取 → 隐私脱敏 → 质量清洗 → 切分入库 → 特征提取 → 人设画像 → 检索验证。</li></ul>
+    <div class="pair">
+      <a class="shot" href="/manual/img/16-train-principles.jpg" target="_blank"><img src="/manual/img/16-train-principles.jpg" alt="数据采集原则与确认" loading="lazy"></a>
+      <a class="shot" href="/manual/img/17-train-done.jpg" target="_blank"><img src="/manual/img/17-train-done.jpg" alt="训练八个阶段全部完成" loading="lazy"></a>
+    </div>
+    <div class="say">这不是修改大模型本身，而是把老师自己的资料作为这位智能体的“记忆”和表达风格。之后研讨时，她会引用这份说课稿。资料可以随时撤回。</div>
+  </div></div>
+
+  <div class="step"><div class="num g">13</div><div>
+    <h3>学生智能体：导入班级画像，自动分组</h3>
+    <ul class="do"><li>切到 <b>学生智能体</b> 页签，点 <b>导入群体数据</b>，选择材料 ③《电气2401班画像.csv》，名称写“电气2401班”，勾选确认后导入。</li><li>系统丢弃姓名、学号列，按先修水平异质分组，把 40 行画像逐一分配给 40 名学生智能体。</li></ul>
+    <a class="shot" href="/manual/img/18-class-profile.jpg" target="_blank"><img src="/manual/img/18-class-profile.jpg" alt="班级画像导入：六个处理阶段与分组结果" loading="lazy"></a>
+  </div></div>
+
+  <div class="step"><div class="num c">14</div><div>
+    <h3>用修订后的课件和真实班级，再上一次课（第三次切换）</h3>
+    <ul class="do"><li>回到产物库打开修订版课件，再点一次 <b>送到演课场上课 →</b>。</li><li>在演课场顶部“班级”下拉框选 <b>画像：电气2401班</b>，点 <b>▶ 开始上课</b>。</li></ul>
+    <div class="pair">
+      <a class="shot" href="/manual/img/19-classroom-profile.jpg" target="_blank"><img src="/manual/img/19-classroom-profile.jpg" alt="选择班级画像开课" loading="lazy"></a>
+      <a class="shot" href="/manual/img/20-classroom-round2.jpg" target="_blank"><img src="/manual/img/20-classroom-round2.jpg" alt="第二轮上课" loading="lazy"></a>
+    </div>
+    <div class="say">这次每名学生的先修水平、发言活跃度、质疑倾向和常见误解都来自班级画像。可以对比两次课的提问数、质疑数和小组活跃度。</div>
+  </div></div>
+
+  <div class="step"><div class="num g">15</div><div>
+    <h3>（可选）下一次新建任务时选择这个班级</h3>
+    <ul class="do"><li>回到步骤 3 的“新建任务”窗口，在 <b>班级（学情依据）</b> 中选择“电气2401班”：生成的大纲“学情分析”会写入该班先修水平分布和常见误解，模拟上课也使用这个班。</li></ul>
+    <p class="tip">没有选择班级时，学情分析会如实写“尚未导入班级画像”，不会编造学情。</p>
+  </div></div>
+
+  <h2 id="line3">主线三　量规、评分与数据的导入导出 <small>约 8 分钟</small></h2>
+
+  <div class="step"><div class="num">16</div><div>
+    <h3>人工评分：打开“盲评模式”</h3>
+    <ul class="do"><li>顶部点 <b>评价与科研</b>，左侧点 <b>人工评分（可盲评）</b>，勾选 <b>盲评模式</b>。</li><li>填写评价者编码（如 R01），逐条按量规打分；每个等级都有锚点说明，可以标记“不适用 / 证据不足”，这两种不按 0 分计。</li></ul>
+    <a class="shot" href="/manual/img/21-blind-rating.jpg" target="_blank"><img src="/manual/img/21-blind-rating.jpg" alt="盲评模式的人工评分页" loading="lazy"></a>
+    <div class="say">盲评时看不到是哪位学生或老师说的、是模型还是本地生成、其他评价者打了几分，顺序也按评价者随机打乱，避免先入为主。</div>
+  </div></div>
+
+  <div class="step"><div class="num">17</div><div>
+    <h3>导入自定义量规</h3>
+    <ul class="do"><li>点右上 <b>导入量规 JSON</b>，粘贴材料 ④ 的内容，点 <b>预览</b> 检查结构，再点 <b>保存</b>。量规按版本保存，不会改动历史评分。</li></ul>
+    <a class="shot" href="/manual/img/22-rubric-import.jpg" target="_blank"><img src="/manual/img/22-rubric-import.jpg" alt="导入自定义量规并预览" loading="lazy"></a>
+    <p class="tip">多位评价者评完后，在“评价与科研 → 评分一致性”可以看到每个维度的加权 κ、Krippendorff α 和 ICC；线下纸质评分表也可以用“导入评分”导入。</p>
+  </div></div>
+
+  <div class="step"><div class="num">18</div><div>
+    <h3>新建研究项目</h3>
+    <ul class="do"><li>在“评价与科研”点 <b>＋ 新建</b>，填写研究题目，选学科领域和研究设计。</li><li>在“研究设计”页补充研究问题、组别、时间点和伦理批准号；右侧“发表前自检”会提示还缺什么。</li></ul>
+    <a class="shot" href="/manual/img/23-research-project.jpg" target="_blank"><img src="/manual/img/23-research-project.jpg" alt="研究项目与发表前自检" loading="lazy"></a>
+  </div></div>
+
+  <div class="step"><div class="num">19</div><div>
+    <h3>智能导入名册：表头自动对应</h3>
+    <ul class="do"><li>“被试与知情同意”页点 <b>导入名册</b>，选择材料 ⑤。</li><li>你的表头（研究编码、组别、是否签署知情同意书…）会被自动对应到字段，每列标出匹配把握；有问题的行会逐条列出。点 <b>确认导入</b>。</li></ul>
+    <a class="shot" href="/manual/img/24-smart-import.jpg" target="_blank"><img src="/manual/img/24-smart-import.jpg" alt="智能导入：表头自动对应字段" loading="lazy"></a>
+    <p class="tip">所有表格（被试、题项、作答、编码、评分、产物里的表格）都用同一个导入窗口；姓名、学号、手机号等列会被自动忽略。</p>
+  </div></div>
+
+  <div class="step"><div class="num">20</div><div>
+    <h3>量表：导入题项和作答，一键算信度</h3>
+    <ul class="do"><li>“量表与测试”页点 <b>＋ 新建</b> 建一个量表，依次用 <b>导入题项</b>（材料 ⑥）和 <b>导入作答</b>（材料 ⑦）。</li><li>点 <b>计算</b>，得到各维度的 Cronbach α、题总相关，以及各组的描述统计。反向题自动反转计分，未同意的被试自动排除。</li></ul>
+    <a class="shot" href="/manual/img/25-alpha.jpg" target="_blank"><img src="/manual/img/25-alpha.jpg" alt="Cronbach α 与描述统计" loading="lazy"></a>
+  </div></div>
+
+  <div class="step"><div class="num">21</div><div>
+    <h3>一键导出研究数据包</h3>
+    <ul class="do"><li>“数据包导出”页点 <b>下载项目数据包</b>：内含被试、题项、长表与宽表作答（附 SPSS 语法）、分析结果、R 脚本、数据字典和 SHA-256 清单。</li><li>单张表也可以导出 Excel / CSV / SPSS / JSON。</li></ul>
+    <a class="shot" href="/manual/img/26-export.jpg" target="_blank"><img src="/manual/img/26-export.jpg" alt="数据包导出" loading="lazy"></a>
+    <div class="say">平台只计算描述统计和信度；组间差异、前后测比较请在 SPSS 或 R 里做。演示结束后，可以删除演示用的研究项目。</div>
+  </div></div>
+
+  <h2 id="sisi">随时问思思 · 账号设置</h2>
+
+  <div class="step"><div class="num">★</div><div>
+    <h3>数字客服思思：点右下角的水晶球提问</h3>
+    <ul class="do"><li>点右下角的 <b>思思</b> 打开对话框，直接输入问题，或点下方的推荐问题。</li><li>回答会注明来源文档；点 🔊 打开或关闭语音朗读，每条回答旁的 <b>▶ 朗读</b> 可以单独朗读。</li><li>登录前也能向她提问，这时用本地知识库回答；登录后与平台共享管理员配置的大模型，不扣积分。</li></ul>
+    <a class="shot" href="/manual/img/01b-sisi.jpg" target="_blank"><img src="/manual/img/01b-sisi.jpg" alt="思思的对话框与回答来源" loading="lazy"></a>
+    <div class="say">思思的知识库来自平台全部说明文档：在“智能体 → 客服数字人 · 思思”可以看到她的训练过程（采集文档 → 清洗切分 → 建立索引 → 检索验证），并随时点“重新训练”。</div>
+    <a class="shot" href="/manual/img/29-sisi-train.jpg" target="_blank" style="margin-top:10px"><img src="/manual/img/29-sisi-train.jpg" alt="思思的训练过程与检索验证" loading="lazy"></a>
+  </div></div>
+
+  <div class="step"><div class="num g">★</div><div>
+    <h3>注册时选择头像，之后可随时更换</h3>
+    <ul class="do"><li>管理员开放自助注册后，登录页有“注册教师账号”：填写登录名、显示名、密码，并从 <b>12 个 3D 水晶球头像</b> 中选择一个。</li><li>之后可以在右上角“账号、积分与备份”的 <b>我的头像</b> 中更换，右上角会显示你的头像。</li></ul>
+    <div class="pair">
+      <a class="shot" href="/manual/img/00-register-avatar.jpg" target="_blank"><img src="/manual/img/00-register-avatar.jpg" alt="注册时选择头像" loading="lazy"></a>
+      <a class="shot" href="/manual/img/27-avatar.jpg" target="_blank"><img src="/manual/img/27-avatar.jpg" alt="账号页更换头像" loading="lazy"></a>
+    </div>
+  </div></div>
+
+  <div class="step"><div class="num g">★</div><div>
+    <h3>退出登录：可以选择“退出并清空缓存”</h3>
+    <ul class="do"><li>点右上角用户名 → <b>退出登录</b>，选择 <b>退出登录</b>（保留本机偏好）或 <b>退出并清空缓存</b>（清除本机的偏好、指引记录、临时草稿和与思思的对话记录，适合公用电脑）。</li><li>两种方式都不会删除服务器上的任何成果。</li></ul>
+    <a class="shot" href="/manual/img/28-logout.jpg" target="_blank"><img src="/manual/img/28-logout.jpg" alt="退出登录的两种方式" loading="lazy"></a>
+  </div></div>
+
+  <h2>常见问题</h2>
+  <table>
+    <tr><th style="width:32%">现象</th><th>处理</th></tr>
+    <tr><td>演课场点 ▶ 没反应，或提示“暂无当前产物”</td><td>先在研课场打开一份课件或教案，点“送到演课场上课 →”。</td></tr>
+    <tr><td>上课太慢</td><td>默认已是 10×；播放器右侧可选 20× 或 60×，也可以点“快进”。</td></tr>
+    <tr><td>研课场画面信息太多</td><td>点顶部“简洁视图”，只留研讨对话、任务进度和播放器。</td></tr>
+    <tr><td>研课场显示“课堂反馈已带回”</td><td>点横幅上的“依据这份反馈修订原产物 →”即可开始修订。</td></tr>
+    <tr><td>新建任务时识别出的课程不对</td><td>在“导入课程内容”的材料列表里只勾选这门课的材料；新上传的材料会自动取代默认勾选。</td></tr>
+    <tr><td>要展示真实大模型</td><td>页面顶部切到“DeepSeek API 运行”（需管理员先配置模型；按成功调用扣积分，开始前会显示最多消耗）。</td></tr>
+  </table>
+</main>
+<footer>研思智境 · 演示操作手册　|　截图来自平台实际运行（本地生成模式）；演示材料中的班级画像、名册与作答均为虚构数据。</footer>
+</body>
+</html>

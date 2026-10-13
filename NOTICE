@@ -1,0 +1,49 @@
+# 第三方组件声明（Third-Party Notices）
+
+本软件再分发了以下第三方组件。各组件的著作权归其各自所有者所有，
+并按其各自的许可条款授权使用。本文件依据相关许可的署名要求提供。
+
+---
+
+## 1. MediaPipe Tasks Vision (`@mediapipe/tasks-vision`)
+
+- 位置：`public/vendor/mediapipe/`
+- 版本：1.0.1
+- 来源：https://www.npmjs.com/package/@mediapipe/tasks-vision
+- 版权：Copyright 2023 The MediaPipe Authors
+- 许可：Apache License 2.0
+
+该目录包含以下由上游分发的文件（经 `scripts/setup-pose-assets.mjs`
+以校验和验证后获取，来源与摘要记录在
+`public/vendor/mediapipe/asset-manifest.json`）：
+
+  - `vision_bundle.mjs` / `vision_bundle.js` / `vision_bundle.cjs`
+  - `vision_bundle.mjs.map` / `vision_bundle.cjs.map`
+  - `wasm/`（`vision_wasm_internal.wasm` 等 WebAssembly 运行时）
+  - `vision.d.ts`、`README.md`
+  - `pose-smoke.jpg`（上游自带的冒烟测试图像）
+
+Apache License 2.0 全文见 `licenses/Apache-2.0.txt`，
+亦可从 http://www.apache.org/licenses/LICENSE-2.0 获取。
+
+## 2. MediaPipe Pose Landmarker 模型（`pose_landmarker_lite.task`）
+
+- 位置：`public/vendor/mediapipe/pose_landmarker_lite.task`
+- 来源：https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+- 版权：Copyright 2023 The MediaPipe Authors
+- 许可：Apache License 2.0
+
+该模型文件由 `scripts/setup-pose-assets.mjs` 以固定的 SHA-256 校验和验证后下载，
+摘要记录在 `public/vendor/mediapipe/asset-manifest.json`。
+
+---
+
+## 如何满足再分发要求
+
+本软件在源码中以 `.gitignore` 排除 `public/vendor/mediapipe/`，运行
+`npm run setup:pose` 从上游重新获取资产。若你重新分发了本软件，
+请确认：
+
+1. 保留本 `NOTICE` 文件与 `licenses/Apache-2.0.txt`；
+2. 若分发的是包含 `public/vendor/mediapipe/` 的完整包或容器镜像，
+   上述声明随包一并分发即满足 Apache-2.0 第 4 条的署名要求。

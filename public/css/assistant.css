@@ -1,0 +1,82 @@
+/* 数字客服“思思”：右下角水晶球数字人 · 对话面板 · 头像选择 */
+.sisi { position: fixed; right: 18px; bottom: 18px; z-index: 55; font-size: calc(14px * var(--fs)); }
+body.is-sw .sisi, body.is-cl .sisi { bottom: 26px; }
+.sisi-orb { position: relative; display: grid; place-items: center; width: 78px; height: 78px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; animation: sisi-bob 3.6s ease-in-out infinite; filter: drop-shadow(0 10px 16px rgba(122, 35, 70, .35)); }
+.sisi-orb:hover { transform: scale(1.06); }
+.sisi-orb:focus-visible { outline: 3px solid #f39cbc; outline-offset: 4px; }
+.sisi-orb .av-orb { width: 78px; height: 78px; }
+.sisi-orb::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(243, 156, 188, .55); animation: sisi-ring 2.8s ease-out infinite; pointer-events: none; }
+.sisi-name { position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); padding: 1px 10px; border-radius: 999px; background: linear-gradient(135deg, #e2638f, #b3264f); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: 2px; box-shadow: 0 3px 8px rgba(122, 35, 70, .35); white-space: nowrap; }
+.sisi-wave { position: absolute; right: -6px; top: 8px; display: none; gap: 2px; align-items: end; height: 18px; }
+.sisi-wave i { width: 3px; border-radius: 2px; background: #e2638f; animation: sisi-bar .8s ease-in-out infinite; }
+.sisi-wave i:nth-child(2) { animation-delay: .15s; } .sisi-wave i:nth-child(3) { animation-delay: .3s; } .sisi-wave i:nth-child(4) { animation-delay: .45s; }
+.sisi.speaking .sisi-wave { display: flex; }
+.sisi.speaking .sisi-orb { animation: sisi-talk .5s ease-in-out infinite alternate; }
+.sisi-tip { position: absolute; right: 88px; bottom: 22px; width: max-content; max-width: 220px; padding: 8px 12px; border-radius: 12px 12px 2px 12px; background: #fff; color: #7a2346; border: 1px solid #f7c6d7; box-shadow: 0 8px 20px rgba(122, 35, 70, .18); font-size: 13px; }
+.sisi-panel { position: absolute; right: 0; bottom: 96px; width: min(390px, calc(100vw - 32px)); height: min(560px, calc(100vh - 150px)); height: min(560px, calc(100dvh - 150px)); display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: #fffafc; border: 1px solid #f3c3d4; box-shadow: 0 24px 60px rgba(90, 20, 50, .28); color: #3a2230; }
+.sisi-panel[hidden] { display: none; }
+.sisi-panel header { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; background: linear-gradient(135deg, #fbe3ec, #f7cadb 60%, #efb2c8); border-bottom: 1px solid #f3c3d4; }
+.sisi-hava { width: 42px; height: 42px; flex: none; } .sisi-hava .av-orb { width: 42px; height: 42px; }
+.sisi-ht { display: grid; flex: 1; min-width: 0; } .sisi-ht b { color: #8a1f47; } .sisi-ht small { color: #8c5a6e; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sisi-ic { border: 0; background: rgba(255, 255, 255, .6); width: 32px; height: 32px; border-radius: 10px; cursor: pointer; font-size: 15px; color: #7a2346; padding: 0; }
+.sisi-ic:hover { background: #fff; }
+.sisi-msgs { flex: 1; overflow-y: auto; padding: 12px; display: grid; gap: 10px; align-content: start; }
+.sisi-m { display: flex; gap: 8px; align-items: flex-start; }
+.sisi-m p { margin: 0; line-height: 1.7; word-break: break-word; }
+.sisi-m.u { justify-content: flex-end; }
+.sisi-m.u p { background: linear-gradient(135deg, #c4577a, #a6192e); color: #fff; padding: 8px 12px; border-radius: 14px 14px 2px 14px; max-width: 82%; }
+.sisi-m.a > div { background: #fff; border: 1px solid #f3d3df; padding: 8px 12px; border-radius: 2px 14px 14px 14px; max-width: 86%; display: grid; gap: 4px; box-shadow: 0 2px 6px rgba(122, 35, 70, .06); }
+.sisi-mava { width: 30px; height: 30px; flex: none; } .sisi-mava .av-orb { width: 30px; height: 30px; }
+.sisi-src { color: #8c6a78; font-size: 12px; } .sisi-note { color: #a07a2a; font-size: 12px; }
+.sisi-play { justify-self: start; border: 1px solid #f0bfd0; background: #fff5f9; color: #a0305a; border-radius: 999px; font-size: 12px; padding: 1px 10px; cursor: pointer; }
+.sisi-typing { display: flex; gap: 4px; padding: 4px 0; } .sisi-typing i { width: 7px; height: 7px; border-radius: 50%; background: #e2638f; animation: sisi-dot 1s ease-in-out infinite; }
+.sisi-typing i:nth-child(2) { animation-delay: .15s; } .sisi-typing i:nth-child(3) { animation-delay: .3s; }
+.sisi-sug { display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 12px; border-top: 1px dashed #f3d3df; }
+.sisi-chip { border: 1px solid #f0bfd0; background: #fff; color: #8a1f47; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; cursor: pointer; }
+.sisi-chip:hover { background: #fdeef3; }
+.sisi-form { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid #f3d3df; background: #fff; }
+.sisi-form textarea { flex: 1; resize: none; min-height: 40px; max-height: 110px; border-radius: 12px; border: 1px solid #efc2d2; padding: 8px 10px; font: inherit; background: #fffafc; color: #3a2230; }
+.sisi-form button { border-radius: 12px; }
+@keyframes sisi-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes sisi-talk { from { transform: translateY(-2px) scale(1); } to { transform: translateY(-4px) scale(1.04); } }
+@keyframes sisi-ring { 0% { transform: scale(.92); opacity: .9; } 100% { transform: scale(1.25); opacity: 0; } }
+@keyframes sisi-bar { 0%, 100% { height: 4px; } 50% { height: 18px; } }
+@keyframes sisi-dot { 0%, 100% { opacity: .3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+/* 减弱动效：思思与数字人形象的循环动画全部停下 */
+@media (prefers-reduced-motion: reduce) {
+  .sisi-orb, .sisi-orb::after, .sisi-wave i, .sisi-typing i,
+  .sisi.speaking .sisi-orb, .sisi-stage .av-orb { animation: none !important; }
+}
+@media (max-width: 560px) { .sisi { right: 10px; bottom: 10px; } .sisi-orb, .sisi-orb .av-orb { width: 62px; height: 62px; } .sisi-panel { bottom: 80px; right: -2px; } }
+@media print { .sisi { display: none; } }
+
+/* 头像选择（注册 / 账号页） */
+.ava-pick { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.ava-opt { display: grid; justify-items: center; gap: 2px; cursor: pointer; padding: 6px 2px; border-radius: 12px; border: 2px solid transparent; }
+.ava-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.ava-ball { width: 58px; height: 58px; display: block; } .ava-ball .av-orb { width: 58px; height: 58px; }
+.ava-opt small { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.ava-opt:has(input:checked) { border-color: var(--gold, #d6a34a); background: var(--gold-soft, #eec48622); }
+.ava-opt:has(input:focus-visible) { outline: 2px solid var(--gold, #d6a34a); outline-offset: 2px; }
+@media (max-width: 560px) { .ava-pick { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.hdr-ava { display: inline-block; width: 30px; height: 30px; vertical-align: middle; margin-right: 6px; } .hdr-ava .av-orb { width: 30px; height: 30px; }
+.logout-opts { display: grid; gap: 8px; }
+.logout-opts .notice { margin: 0; }
+
+/* 智能体中心 · 客服数字人 */
+.sisi-center { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start; }
+.sisi-card { text-align: center; display: grid; gap: 10px; justify-items: center; }
+.sisi-card h2 small { font-size: 14px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+.sisi-card .row { justify-content: center; }
+.sisi-stage { position: relative; width: 190px; height: 210px; display: grid; place-items: start center; }
+.sisi-stage .av-orb { width: 180px; height: 180px; animation: sisi-bob 3.6s ease-in-out infinite; filter: drop-shadow(0 14px 20px rgba(122, 35, 70, .3)); }
+.sisi-stage::after { content: ""; position: absolute; left: 50%; bottom: 4px; width: 170px; height: 26px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse at 50% 50%, rgba(226, 99, 143, .55), rgba(226, 99, 143, 0) 70%); }
+.sisi-train h4 { margin: 14px 0 6px; color: var(--gold); font-size: calc(13px * var(--fs)); }
+.sisi-train .trv-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.sisi-train .trv-stats div { display: grid; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.sisi-train .trv-stats b { font-size: calc(20px * var(--fs)); color: var(--red, #a6192e); }
+.sisi-train .trv-stats span { font-size: 12px; color: var(--muted); }
+@media (max-width: 1000px) { .sisi-center { grid-template-columns: 1fr; } }
+
+/* 手机上欢迎气泡会盖住页面内容（按钮、表单），只保留思思头像，点开即可提问 */
+@media (max-width: 560px) { .sisi-tip { display: none !important; } }

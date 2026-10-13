@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>研思智境 · 管理员后台</title>
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<script src="/js/theme-init.js"></script>
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/light.css">
+</head>
+<body>
+<header class="app-header" id="header" hidden>
+  <a class="brand" href="/admin" style="text-decoration:none"><img class="brand-mark" src="/img/logo-mark.png" alt="" width="40" height="40"><span><b>研思智境 · 管理员后台</b><small>账号 · 积分 · 模型 · 模板 · 审计</small></span></a>
+  <div class="header-tools"><div class="fs-switch" role="group" aria-label="字号"><button type="button" data-fs-set="m" title="标准字号">A</button><button type="button" data-fs-set="l" title="较大字号">A</button><button type="button" data-fs-set="xl" title="特大字号">A</button></div><div class="theme-switch" role="group" aria-label="显示模式"><button type="button" data-theme-set="auto" title="自动：跟随系统">◐<span class="lbl"> 自动</span></button><button type="button" data-theme-set="light" title="浅色">☀<span class="lbl"> 浅色</span></button><button type="button" data-theme-set="dark" title="深色">☾<span class="lbl"> 深色</span></button></div><span class="badge red">管理员会话</span><span id="who" class="small muted"></span><button class="ghost" id="logout">退出</button></div>
+</header>
+<div class="admin-shell" id="shell" hidden>
+  <nav class="admin-nav" aria-label="后台导航">
+    <a href="/admin" data-tab="overview">概览</a><a href="/admin/teachers" data-tab="teachers">教师管理</a><a href="/admin/credits" data-tab="credits">积分管理</a>
+    <a href="/admin/models" data-tab="models">模型与 API Key</a><a href="/admin/templates" data-tab="templates">模板管理</a><a href="/admin/runs" data-tab="runs">运行与审计</a><a href="/admin/settings" data-tab="settings">系统设置</a>
+  </nav>
+  <main id="app"></main>
+</div>
+<main id="login-root"></main>
+<div id="toast"></div>
+<script type="module" src="/js/admin.js"></script>
+</body>
+</html>

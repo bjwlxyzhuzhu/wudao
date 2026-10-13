@@ -1,0 +1,90 @@
+{
+  "key": "teaching_interaction_v1",
+  "version": 1,
+  "name": "教学互动与反思过程量规草案 v1",
+  "scale": [
+    0,
+    4
+  ],
+  "status": "draft_not_validated",
+  "note": "量规未经效度验证；正式研究需研究设计、专家审查、预测试与独立评价。未评/不适用/证据不足不是 0。",
+  "dimensions": [
+    {
+      "key": "values_alignment",
+      "label": "思政融入",
+      "anchors": [
+        "无关联",
+        "口号",
+        "提及目标",
+        "融入专业任务",
+        "分析价值冲突与责任"
+      ]
+    },
+    {
+      "key": "disciplinary_accuracy",
+      "label": "专业准确性",
+      "anchors": [
+        "错误",
+        "关键错误",
+        "基本正确",
+        "准确完整",
+        "明确边界与不确定性"
+      ]
+    },
+    {
+      "key": "evidence_use",
+      "label": "证据使用",
+      "anchors": [
+        "无依据",
+        "断言",
+        "引用材料",
+        "支持具体结论",
+        "来源可追溯且区分推断"
+      ]
+    },
+    {
+      "key": "question_quality",
+      "label": "质疑质量",
+      "anchors": [
+        "无质疑",
+        "泛问",
+        "指出问题",
+        "缺口与理由",
+        "可检验关键质疑"
+      ]
+    },
+    {
+      "key": "response_quality",
+      "label": "回应质量",
+      "anchors": [
+        "未回应",
+        "回避",
+        "部分回应",
+        "针对性举证",
+        "修正主张并保留未知"
+      ]
+    },
+    {
+      "key": "collaboration",
+      "label": "协作贡献",
+      "anchors": [
+        "无贡献",
+        "重复",
+        "完成分工",
+        "整合观点",
+        "跨专业整合且归属清楚"
+      ]
+    },
+    {
+      "key": "reflection_revision",
+      "label": "反思修订",
+      "anchors": [
+        "无反思",
+        "表态",
+        "建议",
+        "有依据修改",
+        "版本、依据和再验证完整"
+      ]
+    }
+  ]
+}

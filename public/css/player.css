@@ -1,0 +1,88 @@
+/* 播放器条（课堂试验场 / 数字教研室共用）：按钮风格统一；进度条三层（已生成 / 当前位置 / 阶段刻度）；回看时整条转为蓝色。 */
+.pl { display: flex; align-items: center; gap: 14px; padding: 7px 12px; border-radius: 14px; background: var(--sw-panel); border: 1px solid var(--sw-line); box-shadow: 0 4px 16px #6b3a2a10; }
+.pl-btns { display: flex; gap: 6px; flex: none; }
+.pl-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--sw-line); background: var(--sw-panel-2); color: var(--sw-ink); font-weight: 650; font-size: calc(13.5px * var(--fs)); white-space: nowrap; }
+.pl-btn svg { width: 15px; height: 15px; flex: none; }
+.pl-btn:hover:not(:disabled) { background: var(--sw-panel); border-color: #D8A14A99; transform: translateY(-1px); }
+.pl-btn:disabled { opacity: .38; }
+.pl-main { min-width: 124px; color: #fff; border-color: #D8A14A; background: linear-gradient(120deg, #C62A3D, #8E1426); box-shadow: 0 6px 16px #A6192E33; }
+.pl-main:hover:not(:disabled) { background: linear-gradient(120deg, #D73A49, #A6192E); }
+.pl-stop:not(:disabled) { color: var(--sw-red); }
+.pl-mid { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
+.pl-track { position: relative; height: 22px; cursor: pointer; touch-action: none; outline: none; }
+.pl-track.off { cursor: default; opacity: .5; }
+.pl-track:focus-visible .pl-rail { box-shadow: 0 0 0 2px #EBC46B; }
+.pl-rail { position: absolute; left: 0; right: 0; top: 8px; height: 6px; border-radius: 6px; background: var(--sw-line); overflow: hidden; }
+.pl-buf { position: absolute; left: 0; top: 0; bottom: 0; background: color-mix(in srgb, #D8A14A 30%, transparent); transition: width .3s; }
+.pl-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #A6192E, #D8A14A); }
+.pl-marks i { position: absolute; top: 5px; width: 2px; height: 12px; border-radius: 1px; background: var(--sw-ink-2); opacity: .45; transform: translateX(-1px); pointer-events: none; }
+.pl-marks i.mn { top: 7px; height: 8px; width: 1px; opacity: .3; }
+.pl-knob { position: absolute; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #A6192E; transform: translateX(-50%); box-shadow: 0 2px 6px #0000003a; pointer-events: none; }
+.pl-track:not(.off):hover .pl-knob { transform: translateX(-50%) scale(1.15); }
+.pl-hover { position: absolute; bottom: calc(100% + 2px); transform: translateX(-50%); padding: 1px 7px; border-radius: 5px; background: #2a1c22; color: #fff; font-size: max(11px, calc(11px * var(--fs))); white-space: nowrap; pointer-events: none; }
+.pl-info { display: flex; align-items: baseline; gap: 12px; font-size: max(11.5px, calc(12px * var(--fs))); color: var(--sw-ink-2); min-width: 0; }
+.pl-time { font-weight: 700; color: var(--sw-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pl-stage { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pl-state { margin-left: auto; white-space: nowrap; }
+.pl-state.on { color: var(--sw-red); } .pl-state.rv { color: #4285D4; font-weight: 600; } .pl-state.ff { color: var(--sw-gold); font-weight: 600; }
+.pl.reviewing .pl-fill { background: linear-gradient(90deg, #245EA8, #49A5FF); }
+.pl.reviewing .pl-knob { border-color: #245EA8; }
+.pl-speed { display: flex; gap: 2px; flex: none; padding: 2px; border-radius: 9px; border: 1px solid var(--sw-line); background: var(--sw-panel-2); }
+.pl-speed button { border: 0; background: none; padding: 3px 7px; border-radius: 7px; font-size: max(11.5px, calc(11.5px * var(--fs))); color: var(--sw-ink-2); }
+.pl-speed button:hover:not(:disabled) { background: var(--sw-line); transform: none; }
+.pl-speed button.on { background: #245EA8; color: #fff; font-weight: 700; }
+:root:not([data-theme="light"]) .pl-knob { background: #1b161d; }
+@media (max-width: 1100px) { .pl { flex-wrap: wrap; } .pl-mid { order: 3; flex-basis: 100%; } }
+@media (max-width: 720px) { .pl-btn span { display: none; } .pl-btn { padding: 0 10px; } .pl-main { min-width: 0; } .pl-main span { display: inline; } }
+@media (prefers-reduced-motion: reduce) { .pl-buf { transition: none; } }
+
+/* ===== 3D 粉红模块（整条播放器）+ 加高美化的进度槽 ===== */
+.pl {
+  --pk-1: #fff3f6; --pk-2: #ffdbe5; --pk-3: #f9bccd; --pk-edge: #eea2b8; --pk-base: #dc8aa2; --pk-ink: #5a2433; --pk-ink-2: #8a5566;
+  position: relative; gap: 16px; padding: 10px 16px 12px; border-radius: 18px; border: 1px solid var(--pk-edge);
+  background: linear-gradient(180deg, var(--pk-1) 0%, var(--pk-2) 46%, var(--pk-3) 100%);
+  box-shadow: inset 0 1.5px 0 #ffffffe6, inset 0 -3px 0 #e99cb366, 0 4px 0 var(--pk-base), 0 12px 26px #c2185b2e;
+  margin-bottom: 4px;
+}
+.pl::before { content: ""; position: absolute; left: 12px; right: 12px; top: 3px; height: 42%; border-radius: 14px 14px 40% 40% / 14px 14px 12px 12px; background: linear-gradient(180deg, #ffffffb8, #ffffff00); pointer-events: none; }
+.pl > * { position: relative; }
+:root:not([data-theme="light"]) .pl { --pk-1: #6b2a3e; --pk-2: #55203a; --pk-3: #441830; --pk-edge: #8e3f58; --pk-base: #2a0d1a; --pk-ink: #ffe6ee; --pk-ink-2: #e6b3c3; }
+:root:not([data-theme="light"]) .pl::before { background: linear-gradient(180deg, #ffffff26, #ffffff00); }
+/* 键帽式按钮：白色珠光 + 底部厚度，按下时下沉 */
+.pl-btn { height: 38px; border-radius: 12px; border: 1px solid #f1b2c3; color: var(--pk-ink); background: linear-gradient(180deg, #ffffff, #ffeef3); box-shadow: inset 0 1px 0 #fff, 0 3px 0 #e7a3b6, 0 5px 10px #c2185b1f; transition: transform .12s, box-shadow .12s; }
+.pl-btn:hover:not(:disabled) { background: linear-gradient(180deg, #ffffff, #ffe4ec); border-color: #ea8ea8; transform: translateY(-1px); box-shadow: inset 0 1px 0 #fff, 0 4px 0 #e7a3b6, 0 8px 14px #c2185b29; }
+.pl-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 1px 0 #fff, 0 0 0 #e7a3b6, 0 2px 4px #c2185b1f; }
+.pl-btn:disabled { opacity: .45; box-shadow: inset 0 1px 0 #fff, 0 2px 0 #e7a3b688; }
+.pl-main { color: #fff; border-color: #b0213c; background: linear-gradient(180deg, #e0485f 0%, #c62a3d 45%, #9c1830 100%); box-shadow: inset 0 1px 0 #ff9aa9, 0 3px 0 #6d0f1f, 0 6px 14px #a6192e4d; }
+.pl-main:hover:not(:disabled) { background: linear-gradient(180deg, #ea5a70, #d0334a 45%, #a61b33); box-shadow: inset 0 1px 0 #ffa8b5, 0 4px 0 #6d0f1f, 0 9px 18px #a6192e59; }
+.pl-main:active:not(:disabled) { box-shadow: inset 0 1px 0 #ff9aa9, 0 0 0 #6d0f1f, 0 2px 5px #a6192e4d; }
+.pl-stop:not(:disabled) { color: #b0213c; }
+:root:not([data-theme="light"]) .pl-btn:not(.pl-main) { color: #ffe6ee; border-color: #8e3f58; background: linear-gradient(180deg, #7a3149, #5a2238); box-shadow: inset 0 1px 0 #a8566f, 0 3px 0 #2a0d1a, 0 5px 10px #0006; }
+:root:not([data-theme="light"]) .pl-stop:not(:disabled) { color: #ff9fb2; }
+/* 加高的进度槽：内凹轨道 + 条纹缓冲 + 高光填充 + 立体旋钮 */
+.pl-track { height: 30px; }
+.pl-rail { top: 8px; height: 14px; border-radius: 14px; background: linear-gradient(180deg, #e9a9bb 0%, #f7d0db 55%, #fde8ee 100%); box-shadow: inset 0 2px 4px #b8546f73, inset 0 -1px 0 #ffffffb3, 0 1px 0 #ffffffcc; }
+.pl-buf { border-radius: 14px; background: repeating-linear-gradient(-45deg, #ffffff8c 0 6px, #ffffff40 6px 12px); }
+.pl-fill { border-radius: 14px; background: linear-gradient(180deg, #ff8aa3 0%, #e0405f 45%, #b81d41 100%); box-shadow: inset 0 1px 0 #ffc2cf, 0 0 10px #e0405f59; }
+.pl-fill::after { content: ""; position: absolute; left: 4px; right: 4px; top: 2px; height: 4px; border-radius: 4px; background: linear-gradient(180deg, #ffffffb3, #ffffff00); }
+.pl.reviewing .pl-fill { background: linear-gradient(180deg, #7fb6ff 0%, #3d7eff 45%, #245ea8 100%); box-shadow: inset 0 1px 0 #cfe3ff, 0 0 10px #3d7eff59; }
+.pl-marks i { top: 8px; height: 14px; width: 2px; background: #ffffffd9; opacity: .9; box-shadow: 0 0 0 .5px #c2185b33; }
+.pl-marks i.mn { top: 11px; height: 8px; width: 1px; opacity: .6; }
+.pl-knob { top: 3px; width: 24px; height: 24px; border: 2px solid #fff; background: radial-gradient(circle at 35% 30%, #ffffff 0%, #ffd6df 38%, #e0567a 80%, #b81d41 100%); box-shadow: 0 3px 0 #9c1830, 0 5px 10px #7a0f2659; }
+.pl.reviewing .pl-knob { background: radial-gradient(circle at 35% 30%, #ffffff 0%, #d3e5ff 38%, #4d8dff 80%, #245ea8 100%); box-shadow: 0 3px 0 #1c4a86, 0 5px 10px #1c4a8659; border-color: #fff; }
+.pl-track:not(.off):hover .pl-knob { transform: translateX(-50%) scale(1.12); }
+.pl-hover { bottom: calc(100% + 4px); background: #7a1f36; border-radius: 6px; padding: 2px 8px; box-shadow: 0 3px 8px #7a1f3666; }
+:root:not([data-theme="light"]) .pl-rail { background: linear-gradient(180deg, #2a0d1a, #3a1426); box-shadow: inset 0 2px 4px #000a, 0 1px 0 #ffffff1f; }
+.pl-info { color: var(--pk-ink-2); }
+.pl-time { color: var(--pk-ink); font-size: max(12.5px, calc(13px * var(--fs))); }
+.pl-state.on { color: #b0213c; }
+:root:not([data-theme="light"]) .pl-state.on { color: #ff9fb2; }
+.pl-speed { border-color: #f1b2c3; background: linear-gradient(180deg, #ffffffcc, #ffe4ecb3); box-shadow: inset 0 1px 0 #fff, 0 2px 0 #e7a3b6; }
+.pl-speed button { color: var(--pk-ink-2); }
+.pl-speed button.on { background: linear-gradient(180deg, #e0485f, #9c1830); color: #fff; box-shadow: 0 2px 0 #6d0f1f; }
+:root:not([data-theme="light"]) .pl-speed { border-color: #8e3f58; background: linear-gradient(180deg, #5a2238, #441830); box-shadow: 0 2px 0 #2a0d1a; }
+@media (prefers-reduced-motion: reduce) { .pl-btn { transition: none; } }
+.pl-track, .pl-track * { user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+/* 旋钮在 0% / 100% 时不压住按钮与倍速：进度槽两端留出旋钮半径 */
+.pl-mid { padding: 0 12px; }
+.pl-hover { white-space: nowrap; }
