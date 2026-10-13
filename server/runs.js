@@ -707,8 +707,13 @@ export function valueTalk(ev) {
 /** Periodic reconciliation: orphaned calls, stale runs, ended runs with open reservations. */
 export function reconcile(db, { startup = false } = {}) {
   const report = { failed_calls: 0, released: 0, stale_paused: 0 };
-  const cutoff = new Date(Date.now() - (startup ? 0 : 10 * 60e3)).toISOString();
-  for (const c of all(db, "SELECT * FROM model_calls WHERE status='pending' AND request_at < ?", cutoff)) {
+  // A process restart interrupts every in-flight request, including one recorded in
+  // the same millisecond as this reconciliation pass. Periodic reconciliation keeps
+  // the age threshold so it does not race a request that is still legitimately live.
+  const pending = startup
+    ? all(db, "SELECT * FROM model_calls WHERE status='pending'")
+    : all(db, "SELECT * FROM model_calls WHERE status='pending' AND request_at < ?", new Date(Date.now() - 10 * 60e3).toISOString());
+  for (const c of pending) {
     run(db, "UPDATE model_calls SET status='failed', error_code='interrupted', error_message='服务重启或调用中断，未产生有效输出，未扣分', completed_at=? WHERE call_id=?", now(), c.call_id);
     if (c.reservation_id) failCall(db, c.reservation_id, c.call_id);
     const r = one(db, 'SELECT state FROM runs WHERE run_id=?', c.run_id);
@@ -758,3 +763,4 @@ function demoKnowledgeLine(kind, kp, notes, role = {}) {
     default: return '';
   }
 }
+
