@@ -57,7 +57,7 @@ test('立德树人专家：课堂价值表达区分“说理式”与“口号�
 
 test('课堂反馈摘要写入价值表达分类（启发式、需人工复核）', async () => {
   await lessonToClassroom(t, `er-${Date.now()}`);
-  const r = (await t.post('/api/runs', { module: 'classroom', exec_mode: 'demo' })).data;
+  const r = (await t.post('/api/runs', { module: 'classroom', exec_mode: 'demo', config: { seed: 'expert-review' } })).data;
   await t.post(`/api/runs/${r.run_id}/start`); for (let i = 0; i < 40; i++) await t.post(`/api/runs/${r.run_id}/step`);
   await t.post(`/api/runs/${r.run_id}/pause`);
   const fb = (await t.post(`/api/runs/${r.run_id}/feedback`)).data;
