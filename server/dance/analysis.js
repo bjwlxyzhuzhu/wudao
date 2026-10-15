@@ -1,4 +1,5 @@
 import { chat, resolveProvider } from '../models.js';
+import { one } from '../db.js';
 
 export const ROLES = [
   { id: 'a_basic', label: '基本功教练', focus: '仅依据已发布检查点分析动作控制、姿态和稳定性' },
@@ -32,7 +33,10 @@ export function validateCompliance(value, references) {
 export async function analyzeTraining(db, { standard, metrics, keyframes, consentCloud, signal }) {
   const agents = ROLES.map((role) => ({ id: role.id, label: role.label, status: 'skipped', findings: [] }));
   const output = { mode: 'metrics_only', message: '仅姿态指标分析，等待教师复核；未生成 AI 意见', compliance: { status: 'unassessed', summary: '尚未进行千问辅助判断', evidence: [] }, agents, selected: [], calls: [] };
-  const visionId = process.env.DANCE_VISION_PROVIDER_ID;
+  // Environment configuration wins, while an admin-saved DanceMirror Qwen
+  // configuration remains usable after restarts without exposing the key.
+  const savedQwen = one(db, "SELECT provider_id FROM model_configs WHERE enabled=1 AND name LIKE '千问视觉%' ORDER BY updated_at DESC LIMIT 1");
+  const visionId = process.env.DANCE_VISION_PROVIDER_ID || savedQwen?.provider_id;
   if (!consentCloud || !keyframes.length || !visionId) return output;
   const vision = resolveProvider(db, visionId);
   const text = resolveProvider(db, process.env.DANCE_TEXT_PROVIDER_ID || visionId);

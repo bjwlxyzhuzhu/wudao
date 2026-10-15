@@ -177,8 +177,8 @@ test('多模态契约：图片内容块、五次实际调用、证据校验与�
   await new Promise((resolve)=>provider.listen(0,'127.0.0.1',resolve));
   const previous=process.env.DANCE_VISION_PROVIDER_ID;
   try{
-    const config=await configureModel(admin,`http://127.0.0.1:${provider.address().port}/v1`);
-    process.env.DANCE_VISION_PROVIDER_ID=config.provider_id;
+    delete process.env.DANCE_VISION_PROVIDER_ID;
+    await configureModel(admin,`http://127.0.0.1:${provider.address().port}/v1`,{name:'千问视觉（舞镜智练）'});
     const standardRow=app.db.prepare('SELECT * FROM dance_standards WHERE standard_id=?').get(standard);
     const result=await analyzeTraining(app.db,{standard:standardRow,metrics:computeMetrics(pose()),keyframes:[{time:0,data:'data:image/jpeg;base64,/9j/AA=='}],consentCloud:true});
     assert.equal(result.mode,'multimodal');assert.equal(requests.length,5);

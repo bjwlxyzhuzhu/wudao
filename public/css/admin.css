@@ -73,6 +73,16 @@ body.dance-admin .admin-nav a.active::before { content: ""; position: absolute; 
 body.dance-admin .admin-shell main#app { padding: 28px 32px 48px; }
 body.dance-admin .kpi { border-radius: 16px; background: var(--surface); }
 body.dance-admin .kpi b { color: #c5ef8e; }
+.qwen-setup { margin-bottom: 26px; padding: 26px !important; background: linear-gradient(145deg, #202a20, #171d19) !important; }
+.qwen-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+.qwen-head .eyebrow { color: #c5ef8e; font-size: calc(11px * var(--fs)); letter-spacing: 2px; }
+.qwen-head h2 { margin: 4px 0 6px !important; font-size: calc(22px * var(--fs)) !important; }
+.qwen-head p { margin: 0; color: var(--muted); }
+.qwen-form { display: grid; grid-template-columns: minmax(240px, 1.2fr) minmax(280px, 1.4fr) minmax(180px, .8fr); gap: 16px; align-items: end; }
+.qwen-actions { display: flex; gap: 10px; grid-column: 1 / -1; }
+.qwen-security { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+.model-advanced { margin-top: 6px; }
+.model-advanced h2 { margin: 0; font-size: calc(17px * var(--fs)); }
 
 .admin-login-wrap { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 28px; position: relative; z-index: 1; }
 .admin-login { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(340px, 430px); width: min(900px, 100%); overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
@@ -104,4 +114,7 @@ body.dance-admin .kpi b { color: #c5ef8e; }
   .admin-login-figure img { width: 72px; height: 72px; margin-bottom: 12px; }
   .admin-login-figure > span { display: none; }
   .admin-login-panel { padding: 30px 24px; }
+  .qwen-head { display: grid; }
+  .qwen-form { grid-template-columns: 1fr; }
+  .qwen-actions { grid-column: auto; flex-direction: column; }
 }

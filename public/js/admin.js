@@ -131,7 +131,16 @@ async function credits() {
 // ---------- 模型与 API Key ----------
 async function models() {
   const r = await get('/api/admin/models');
-  app.innerHTML = `<div class="toolbar"><h1>模型与 API Key</h1><span class="grow"></span><button class="primary" id="add">新增模型配置</button></div>
+  const qwen = r.models.find((m) => m.name.startsWith('千问视觉'));
+  app.innerHTML = `<div class="toolbar"><h1>千问视觉识别</h1><span class="small muted">用于骨骼关键帧、动作角度和教师标准的 AI 辅助判断</span></div>
+    <section class="panel qwen-setup"><div class="qwen-head"><div><span class="eyebrow">QWEN VISION</span><h2>舞镜智练 AI 动作识别</h2><p>保存后，学生授权的骨骼关键帧会由千问辅助识别，结果仍需教师复核。</p></div>${qwen?.key_configured && qwen.enabled ? `<span class="badge green">已启用 · Key 尾号 ${esc(qwen.key_last4)}</span>` : '<span class="badge warn">尚未完成配置</span>'}</div>
+      <form id="qwen-form" class="qwen-form"><label>千问 API Key<input name="api_key" type="password" autocomplete="off" placeholder="${qwen?.key_configured ? `已配置，尾号 ${esc(qwen.key_last4)}；不修改可留空` : '粘贴阿里云百炼 API Key'}"></label>
+        <label>API 服务地址<input name="base_url" value="${esc(qwen?.base_url || 'https://dashscope.aliyuncs.com/compatible-mode/v1')}" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"></label>
+        <label>视觉模型<input name="model_id" value="${esc(qwen?.model_id || 'qwen3-vl-plus')}" placeholder="qwen3-vl-plus"></label>
+        <div class="qwen-actions"><button class="primary" type="submit">保存并启用</button>${qwen?.key_configured ? `<button type="button" data-test="${qwen.provider_id}">测试千问连接</button>` : ''}</div></form>
+      <p class="small faint qwen-security">API Key 只发送到服务端并使用 AES-256-GCM 加密保存；页面、日志和导出均不会显示完整密钥。</p>
+    </section>
+    <div class="toolbar model-advanced"><h2>高级模型配置</h2><span class="grow"></span><button id="add">新增其他模型</button></div>
     <div class="notice small" style="margin-bottom:12px">API Key 仅服务端加密保存；页面、接口、日志、导出只显示“已配置/尾号”。连接测试会向供应商发出真实请求，可能产生真实 API 费用（不计入教师积分）。</div>
     <div class="panel scroll-x"><table class="data"><thead><tr><th>名称</th><th>接口</th><th>服务地址</th><th>模型ID</th><th>密钥</th><th>费率/并发/超时/max_tokens</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${r.models.map((m) => `<tr><td>${esc(m.name)}${m.is_default ? ' <span class="badge gold">默认</span>' : ''}</td><td class="small">${esc(r.kinds[m.kind])}</td><td class="mono">${esc(m.base_url)}</td><td class="mono">${esc(m.model_id)}</td>
@@ -152,6 +161,16 @@ async function models() {
       buttons: [{ label: '取消', value: null }, { label: '保存', cls: 'primary', handler: async (el) => { const f = formData($('#mf', el)); if (m?.provider_id) f.provider_id = m.provider_id; if (!f.api_key) delete f.api_key; return post('/api/admin/models', f); } }] });
     if (ok) { toast('已保存'); models(); }
   };
+  $('#qwen-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const input = formData(event.target);
+    const payload = { provider_id: qwen?.provider_id, name: qwen?.name || '千问视觉（舞镜智练）', kind: 'openai_compatible', base_url: input.base_url,
+      model_id: input.model_id, api_key: input.api_key, credit_rate: 1, concurrency: 2, timeout_ms: 90000, max_tokens: 2000,
+      cost_info: '舞镜智练骨骼关键帧与动作角度辅助识别', enabled: true, is_default: true };
+    if (!payload.provider_id) delete payload.provider_id;
+    if (!payload.api_key) delete payload.api_key;
+    try { await post('/api/admin/models', payload); toast('千问视觉识别已保存并启用'); models(); } catch (error) { fail(error); }
+  });
   $('#add').addEventListener('click', () => edit(null));
   $$('[data-edit]').forEach((b) => b.addEventListener('click', () => edit(r.models.find((m) => m.provider_id === b.dataset.edit))));
   $$('[data-key]').forEach((b) => b.addEventListener('click', async () => {
