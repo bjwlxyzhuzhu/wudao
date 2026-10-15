@@ -9,7 +9,9 @@ after(async () => { await app.stop(); });
 
 test('演知思政版：页面、脚本、手册、Logo 与思思的回答使用新名称', async () => {
   const get = (p) => fetch(app.base + p);
-  for (const p of ['/', '/manual', '/admin', '/js/home.js']) { const t = await (await get(p)).text(); assert.ok(!t.includes('研思智境') && t.includes('演知思政'), p); }
+  for (const p of ['/', '/manual', '/js/home.js']) { const t = await (await get(p)).text(); assert.ok(!t.includes('研思智境') && t.includes('演知思政'), p); }
+  const admin = await (await get('/admin')).text();
+  assert.ok(!admin.includes('研思智境') && admin.includes('舞镜智练'), '舞蹈管理中心保持独立产品品牌');
   assert.match(await (await get('/')).text(), /<title>演知思政 · 基于Agents协同与对抗的虚拟教研实训工场<\/title>/);
   const logo = Buffer.from(await (await get('/img/logo-full.png')).arrayBuffer());
   const { readFileSync } = await import('node:fs');

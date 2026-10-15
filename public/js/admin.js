@@ -27,9 +27,15 @@ async function route() {
 
 function login() {
   $('#header').hidden = true; $('#shell').hidden = true;
-  $('#login-root').innerHTML = `<div class="login-wrap" style="position:relative;z-index:1"><form class="panel login-card" id="lf"><div class="fs-switch" role="group" aria-label="字号"><button type="button" data-fs-set="m" title="标准字号">A</button><button type="button" data-fs-set="l" title="较大字号">A</button><button type="button" data-fs-set="xl" title="特大字号">A</button></div><div class="theme-switch" role="group" aria-label="显示模式"><button type="button" data-theme-set="auto" title="自动：跟随系统">◐</button><button type="button" data-theme-set="light" title="浅色">☀</button><button type="button" data-theme-set="dark" title="深色">☾</button></div><div class="login-logo"><img src="/img/logo-full.png" alt="研思智境 · Research · Reflection · Simulation · Improvement · Multi-Agent Teaching Research Intelligence"></div><h1 class="login-title">管理员登录</h1><div class="small muted login-sub">研思智境平台后台 · 与教师入口分开的会话</div>
-    <div style="display:grid;gap:12px"><label>登录名<input name="login" autocomplete="username"></label><label>密码<input name="password" type="password" autocomplete="current-password"></label><button class="primary">登录</button><a class="small" href="/login">← 教师入口</a>
-    <p class="small faint">首个管理员账号通过受保护的部署初始化命令创建（npm run init-admin），系统不内置默认密码。</p></div></form></div>`;
+  $('#login-root').innerHTML = `<div class="admin-login-wrap"><section class="admin-login">
+    <div class="admin-login-figure"><img src="/dance/mark.svg" alt=""><div><h1>舞镜智练</h1><p>让每一次练习看得见</p></div><span>账号 · 千问 · 训练审计</span></div>
+    <form class="admin-login-panel" id="lf"><div class="login-tools"><div class="fs-switch" role="group" aria-label="字号"><button type="button" data-fs-set="m" title="标准字号">A</button><button type="button" data-fs-set="l" title="较大字号">A</button><button type="button" data-fs-set="xl" title="特大字号">A</button></div></div>
+      <small>舞蹈训练管理中心</small><h2>管理员登录</h2><p>管理教师、学生账号与千问模型配置。</p>
+      <label>登录名<input name="login" autocomplete="username" required placeholder="请输入管理员账号"></label>
+      <label>密码<input name="password" type="password" autocomplete="current-password" required placeholder="请输入密码"></label>
+      <button class="primary wide">登录</button><a class="back-to-dance" href="/wujing">← 返回舞镜智练</a>
+      <p class="login-help">演示环境可使用 admin01 / Admin123；正式环境请使用部署时设置的管理员密码。</p>
+    </form></section></div>`;
   $('#lf').addEventListener('submit', async (e) => { e.preventDefault(); try { me = (await post('/api/admin/auth/login', formData(e.target))).user; go('/admin'); } catch (err) { fail(err); } });
 }
 async function changePw() {
@@ -54,7 +60,7 @@ async function overview() {
 async function teachers() {
   const q = new URLSearchParams(location.search).get('q') || '';
   const r = await get(`/api/admin/users?q=${encodeURIComponent(q)}`);
-  app.innerHTML = `<div class="toolbar"><h1>教师管理</h1><input id="q" placeholder="搜索登录名/显示名/假名" value="${esc(q)}" style="width:240px"><button id="search">搜索</button><span class="grow"></span><button class="primary" id="add">创建/邀请教师</button></div>
+  app.innerHTML = `<div class="toolbar"><h1>账号管理</h1><input id="q" placeholder="搜索登录名/显示名/假名" value="${esc(q)}" style="width:240px"><button id="search">搜索</button><span class="grow"></span><button class="primary" id="add">创建管理账号</button></div>
     <div class="panel scroll-x"><table class="data"><thead><tr><th>登录名</th><th>显示名</th><th>身份</th><th>状态</th><th>总/冻结/可用</th><th>最近登录</th><th>创建</th><th>操作</th></tr></thead><tbody>
     ${r.users.map((u) => `<tr><td>${esc(u.login)}</td><td>${esc(u.display_name)}</td><td>${u.is_teacher ? '<span class="badge">教师</span>' : ''} ${u.is_admin ? '<span class="badge red">管理员</span>' : ''}</td>
       <td>${u.status === 'active' ? '<span class="badge green">启用</span>' : '<span class="badge warn">停用</span>'}${u.must_change_password ? ' <span class="badge">待改密</span>' : ''}</td>
