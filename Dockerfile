@@ -36,7 +36,7 @@ RUN if [ -f public/vendor/mediapipe/vision_bundle.mjs ]; then \
  && cp -f public/vendor/mediapipe/LICENSE /app/NOTICE-mediapipe-Apache-2.0.txt 2>/dev/null || true
 
 # 启动自检：确认服务端模块可以加载（语法/依赖问题在构建期暴露）
-RUN node --check server/server.js && node --check server/dance/service.js
+RUN node --check server/server.js && node --check server/dance/service.js && node --check server/dance/bootstrap.js
 
 RUN mkdir -p /app/data \
  && chown -R node:node /app

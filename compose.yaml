@@ -1,0 +1,32 @@
+services:
+  wudao:
+    image: ${WUDA_IMAGE:-wudao:local}
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+      DANCE_HOME: 1
+      YANZHI_SECURE_COOKIE: ${YANZHI_SECURE_COOKIE:-0}
+      YANZHI_MASTER_KEY: ${YANZHI_MASTER_KEY:-}
+      # 默认是可直接体验的公开演示账号；公网部署请设为 0 并使用下方 Secret。
+      DANCE_DEMO_MODE: ${DANCE_DEMO_MODE:-1}
+      DANCE_BOOTSTRAP_ACCOUNTS: ${DANCE_BOOTSTRAP_ACCOUNTS:-0}
+      DANCE_ADMIN_PASSWORD: ${DANCE_ADMIN_PASSWORD:-}
+      DANCE_TEACHER_PASSWORD: ${DANCE_TEACHER_PASSWORD:-}
+      DANCE_STUDENT_PASSWORD: ${DANCE_STUDENT_PASSWORD:-}
+      DANCE_MEDIC_PASSWORD: ${DANCE_MEDIC_PASSWORD:-}
+      # 千问密钥不会写入镜像；在服务器环境或部署平台 Secret 中设置。
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      QWEN_BASE_URL: ${QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      QWEN_VISION_MODEL: ${QWEN_VISION_MODEL:-qwen3-vl-plus}
+      QWEN_CONCURRENCY: ${QWEN_CONCURRENCY:-2}
+      QWEN_TIMEOUT_MS: ${QWEN_TIMEOUT_MS:-90000}
+      QWEN_MAX_TOKENS: ${QWEN_MAX_TOKENS:-2000}
+    volumes:
+      - wudao-data:/app/data
+
+volumes:
+  wudao-data:

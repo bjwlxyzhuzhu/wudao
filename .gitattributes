@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.docx binary
+*.pdf binary
+*.db binary
+*.wasm binary
+*.task binary

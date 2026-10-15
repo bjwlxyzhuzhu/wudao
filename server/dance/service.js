@@ -5,9 +5,12 @@ import { computeMetrics } from '../../public/dance/metrics.js';
 import { analyzeTraining, ROLES } from './analysis.js';
 
 export const ACTIONS = [
-  { key: 'demi-plie', title: '基础蹲练习', tag: '基本功 · 下肢控制', view: 'front', description: '从准备到下蹲、还原，观察躯干稳定与左右膝角变化。' },
-  { key: 'single-support', title: '单腿支撑', tag: '稳定 · 身体轴线', view: 'front', description: '观察保持阶段的肩胯关系与髋中点摆动。' },
-  { key: 'leg-control', title: '控腿练习', tag: '控制 · 动作质量', view: 'side', description: '按老师要求完成片段，观察膝角和躯干姿态。' },
+  { key: 'first-position', title: '一位站姿', tag: '静态基准 · 身体轴线', view: 'front', description: '观察肩胯水平、躯干中立、双腿排列和站立稳定性。' },
+  { key: 'second-position', title: '二位站姿', tag: '静态基准 · 对称控制', view: 'front', description: '观察双侧对称、骨盆稳定、膝脚方向与重心分配。' },
+  { key: 'demi-plie', title: '二位 plié 蹲', tag: '核心慢速基训 · 下肢控制', view: 'front', description: '从准备到下蹲、还原，观察躯干稳定、膝脚方向与左右膝角变化。' },
+  { key: 'tendu', title: 'Tendu 擦地', tag: '核心慢速基训 · 腿部延伸', view: 'front', description: '观察支撑侧稳定、工作腿路径、膝部伸展和骨盆代偿线索。' },
+  { key: 'passe', title: 'Passé 静态吸腿', tag: '单腿承重 · 平衡控制', view: 'front', description: '观察单腿支撑阶段的肩胯关系、膝髋排列与身体摆动。' },
+  { key: 'degage', title: 'Dégagé 小踢腿', tag: '单腿承重 · 动态控制', view: 'side', description: '观察支撑腿稳定、工作腿抬起路径、膝角和躯干姿态变化。' },
 ];
 
 export function ensureDance(db) {

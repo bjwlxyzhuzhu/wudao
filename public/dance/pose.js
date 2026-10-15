@@ -44,6 +44,26 @@ function privateFrame(video, landmarks, time) {
   const padding = Math.max(right - left, bottom - top, canvas.width * 0.06);
   context.fillStyle = '#182029';
   context.fillRect(left - padding, top - padding * 1.3, right - left + padding * 2, bottom - top + padding * 2.3);
+  // Put the locally detected body skeleton on the consented cloud frame so the
+  // vision model can cross-check visible posture against the numeric metrics.
+  context.strokeStyle = '#b9f36a';
+  context.fillStyle = '#f2ffd8';
+  context.lineWidth = Math.max(2, canvas.width / 260);
+  for (const [start, end] of CONNECTIONS) {
+    const first = landmarks[start], last = landmarks[end];
+    if (!first || !last || first.visibility < 0.6 || last.visibility < 0.6) continue;
+    context.beginPath();
+    context.moveTo(first.x * canvas.width, first.y * canvas.height);
+    context.lineTo(last.x * canvas.width, last.y * canvas.height);
+    context.stroke();
+  }
+  for (const index of [...new Set(CONNECTIONS.flat())]) {
+    const point = landmarks[index];
+    if (!point || point.visibility < 0.6) continue;
+    context.beginPath();
+    context.arc(point.x * canvas.width, point.y * canvas.height, Math.max(2, canvas.width / 220), 0, Math.PI * 2);
+    context.fill();
+  }
   return { time, data: canvas.toDataURL('image/jpeg', 0.75) };
 }
 

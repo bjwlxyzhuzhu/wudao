@@ -2,8 +2,8 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createUser } from '../server/auth.js';
-import { addProfile } from '../server/dance/service.js';
-import { analyzeTraining, validateFindings } from '../server/dance/analysis.js';
+import { ACTIONS, addProfile } from '../server/dance/service.js';
+import { analyzeTraining, validateCompliance, validateFindings } from '../server/dance/analysis.js';
 import { angleDegrees, computeMetrics, validatePose } from '../public/dance/metrics.js';
 import { startApp, client, configureModel, seedUsers } from './helpers.js';
 
@@ -51,6 +51,11 @@ const analyze = async (training) => {
   }
   throw new Error('Analysis did not finish');
 };
+
+test('首期动作库与项目方案保持六项一致', () => {
+  assert.deepEqual(ACTIONS.map((action) => action.key), ['first-position', 'second-position', 'demi-plie', 'tendu', 'passe', 'degage']);
+  assert.equal(new Set(ACTIONS.map((action) => action.title)).size, 6);
+});
 
 test('舞蹈指标：已知角度、宽高比、缺失值、零分母与多人质量门槛', () => {
   assert.equal(angleDegrees({x:0,y:0},{x:0,y:1},{x:1,y:1}),90);
@@ -164,7 +169,7 @@ test('多模态契约：图片内容块、五次实际调用、证据校验与�
     let raw='';request.on('data',(chunk)=>{raw+=chunk;});request.on('end',()=>{
       const body=JSON.parse(raw);requests.push(body);
       const system=body.messages[0].content;
-      const answer=system.includes('证据仲裁')?{selected_ids:['a_basic:1']}:{findings:[{text:'测试观察',evidence:['metric:trunk_tilt'],uncertain:false}]};
+      const answer=system.includes('证据仲裁')?{selected_ids:['a_basic:1'],compliance:{status:'needs_correction',summary:'躯干角度需要教师复核',evidence:['metric:trunk_tilt']}}:{findings:[{text:'测试观察',evidence:['metric:trunk_tilt'],uncertain:false}]};
       response.writeHead(200,{'content-type':'text/event-stream'});
       response.end(`data: ${JSON.stringify({choices:[{delta:{content:JSON.stringify(answer)}}]})}\n\ndata: [DONE]\n\n`);
     });
@@ -179,6 +184,8 @@ test('多模态契约：图片内容块、五次实际调用、证据校验与�
     assert.equal(result.mode,'multimodal');assert.equal(requests.length,5);
     assert.equal(requests[0].messages[1].content[2].type,'image_url');
     assert.equal(result.selected[0].id,'a_basic:1');
+    assert.equal(result.compliance.status,'needs_correction');
     assert.throws(()=>validateFindings({findings:[{text:'不存在的证据',evidence:['metric:imaginary'],uncertain:false}]},new Set(['metric:trunk_tilt'])),/evidence/);
+    assert.throws(()=>validateCompliance({status:'appears_compliant',summary:'看起来符合',evidence:[]},new Set(['metric:trunk_tilt'])),/compliance/);
   }finally{if(previous===undefined)delete process.env.DANCE_VISION_PROVIDER_ID;else process.env.DANCE_VISION_PROVIDER_ID=previous;await new Promise((resolve)=>provider.close(resolve));}
 });

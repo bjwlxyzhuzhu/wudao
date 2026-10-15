@@ -21,9 +21,17 @@ export function validateFindings(value, references) {
   });
 }
 
+export function validateCompliance(value, references) {
+  if (!value || !['appears_compliant', 'needs_correction', 'uncertain'].includes(value.status)) throw new Error('invalid_compliance');
+  if (typeof value.summary !== 'string' || !value.summary.trim() || value.summary.length > 300) throw new Error('invalid_compliance');
+  if (!Array.isArray(value.evidence) || value.evidence.length > 8 || !value.evidence.every((reference) => typeof reference === 'string' && references.has(reference))) throw new Error('invalid_compliance');
+  if (value.status !== 'uncertain' && value.evidence.length === 0) throw new Error('invalid_compliance');
+  return { status: value.status, summary: value.summary.trim(), evidence: [...new Set(value.evidence)] };
+}
+
 export async function analyzeTraining(db, { standard, metrics, keyframes, consentCloud, signal }) {
   const agents = ROLES.map((role) => ({ id: role.id, label: role.label, status: 'skipped', findings: [] }));
-  const output = { mode: 'metrics_only', message: '仅姿态指标分析，等待教师复核；未生成 AI 意见', agents, selected: [], calls: [] };
+  const output = { mode: 'metrics_only', message: '仅姿态指标分析，等待教师复核；未生成 AI 意见', compliance: { status: 'unassessed', summary: '尚未进行千问辅助判断', evidence: [] }, agents, selected: [], calls: [] };
   const visionId = process.env.DANCE_VISION_PROVIDER_ID;
   if (!consentCloud || !keyframes.length || !visionId) return output;
   const vision = resolveProvider(db, visionId);
@@ -56,9 +64,10 @@ export async function analyzeTraining(db, { standard, metrics, keyframes, consen
       agents[index].status = 'completed';
     }
     const findings = agents.flatMap((agent) => agent.findings).filter((finding) => !finding.uncertain);
-    const arbitration = await invoke(text.config, 'a_arbiter', '你是证据仲裁助手。只能从输入中选择最多3条确定性发现，按优先级排序，不新增文字或ID。输出 JSON：{"selected_ids":["a_basic:1"]}。没有依据则返回空数组。教师具有最终决定权。', [{ role: 'user', content: JSON.stringify(findings) }]);
+    const arbitration = await invoke(text.config, 'a_arbiter', '你是证据仲裁助手。只能从输入发现中选择最多3条确定性发现，按优先级排序，不改写发现或ID；同时仅依据教师发布的动作标准、可靠角度指标和可见关键帧，给出保守的动作合规预判。appears_compliant 仅可在所有已发布检查点都有充分证据时使用；有明确偏差用 needs_correction；证据不足用 uncertain。这里的合规仅指动作标准，不代表医学安全。只输出 JSON：{"selected_ids":["a_basic:1"],"compliance":{"status":"needs_correction","summary":"简短依据","evidence":["metric:trunk_tilt"]}}。教师具有最终决定权。', [{ role: 'user', content: `${context}\n候选发现：${JSON.stringify(findings)}` }]);
     if (!Array.isArray(arbitration.selected_ids) || arbitration.selected_ids.length > 3 || !arbitration.selected_ids.every((selected) => findings.some((finding) => finding.id === selected))) throw new Error('invalid_arbitration');
     output.selected = [...new Set(arbitration.selected_ids)].map((selected) => findings.find((finding) => finding.id === selected));
+    output.compliance = validateCompliance(arbitration.compliance, references);
     agents[3].status = 'completed';
     output.mode = 'multimodal';
     output.message = '多模态与角色分析已完成，AI 草稿等待教师确认';

@@ -23,6 +23,7 @@ import * as assistant from './assistant.js';
 import { BRAND, brandText, brandImage } from './brand.js';
 import { analyzeMaterials } from './knowledge.js';
 import { createDanceService } from './dance/service.js';
+import { bootstrapDanceDeployment } from './dance/bootstrap.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = join(ROOT, 'public');
@@ -42,6 +43,9 @@ export function createApp({ dataDir = process.env.YANZHI_DATA_DIR || join(ROOT, 
   agents.ensureTables(db);
   study.ensureTables(db);
   const dance = createDanceService(db, dataDir);
+  const danceBootstrap = bootstrapDanceDeployment(db);
+  if (danceBootstrap.accounts.created.length) console.log(`舞蹈平台已初始化 ${danceBootstrap.accounts.created.length} 个部署账号`);
+  if (danceBootstrap.qwen.enabled) console.log(`千问视觉模型已就绪：${danceBootstrap.qwen.model_id}`);
   try { assistant.train(db, null); } catch (e) { console.error('assistant index', e); } // 启动时建立思思的知识索引
   const routes = [];
   const route = (method, path, scope, handler, opts = {}) => {

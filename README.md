@@ -353,4 +353,3 @@ backups/       时间戳备份（不随源码包分发）
   - `server/brand.js`：服务端统一把界面、页面标题、操作手册、数字客服回答中的“研思智境”替换为“演知思政”，副标题替换为“基于Agents协同与对抗的虚拟教研实训工场”。
   - Logo 使用 `public/img/brand/szsx/logo-full.png`（原图形标志，配新名称）。
   - 不设 `YANZHI_BRAND` 时，就是原版“研思智境”。
-
