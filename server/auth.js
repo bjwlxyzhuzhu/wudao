@@ -52,10 +52,10 @@ export function setAvatar(db, user, key) {
   check(AVATAR_KEYS.includes(key), 400, 'bad_avatar', '请从 12 个头像中选择');
   run(db, 'UPDATE users SET avatar_key=? WHERE user_id=?', key, user.user_id);
 }
-export function createUser(db, { login, display_name, password, is_teacher = true, is_admin = false, must_change_password = true, avatar_key = null }, actor) {
+export function createUser(db, { login, display_name, password, is_teacher = true, is_admin = false, must_change_password = true, avatar_key = null, allowLocalDemoPassword = false }, actor) {
   login = String(login || '').trim();
   check(/^[A-Za-z0-9_.@-]{3,40}$/.test(login), 400, 'bad_login', '登录名需 3—40 位字母、数字或 _.@-');
-  checkPasswordPolicy(password);
+  if (!(allowLocalDemoPassword && password === '12345678')) checkPasswordPolicy(password);
   check(!one(db, 'SELECT 1 FROM users WHERE login=?', login), 409, 'login_taken', '登录名已存在');
   return tx(db, () => {
     const user_id = id('user');

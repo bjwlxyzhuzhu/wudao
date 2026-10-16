@@ -69,13 +69,13 @@ export function createApp({ dataDir = process.env.YANZHI_DATA_DIR || join(ROOT, 
   }
   route('GET', '/api/dance/me', 'dance', ({ user }) => dance.me(user));
   route('GET', '/api/dance/catalog', 'dance', ({ user }) => dance.catalog(user));
-  route('POST', '/api/dance/standards', 'dance', ({ user, body }) => dance.publishStandard(user, body));
+  route('POST', '/api/dance/standards', 'dance', ({ user, body }) => dance.publishStandard(user, body), { limit: 5e6 });
   route('GET', '/api/dance/sessions', 'dance', ({ user }) => ({ sessions: dance.sessions(user) }));
   route('POST', '/api/dance/sessions', 'dance', ({ user, body }) => dance.createTraining(user, body));
   route('GET', '/api/dance/sessions/:id', 'dance', ({ user, params }) => dance.view(user, params.id));
   route('POST', '/api/dance/sessions/:id/pose', 'dance', ({ user, params, body }) => dance.pose(user, params.id, body), { limit: 5e6 });
   route('POST', '/api/dance/sessions/:id/analyze', 'dance', ({ user, params, body }) => dance.analyze(user, params.id, body), { limit: 4e6 });
-  route('POST', '/api/dance/sessions/:id/video', 'dance', ({ user, params, body }) => dance.uploadVideo(user, params.id, body), { limit: 29e6 });
+  route('POST', '/api/dance/sessions/:id/video', 'dance', ({ user, params, body, req }) => dance.uploadVideo(user, params.id, { type: req.headers['content-type'], bytes: body }), { raw: true, limit: 100 * 1024 * 1024 });
   route('GET', '/api/dance/sessions/:id/video', 'dance', ({ user, params, req, res }) => {
     const video = dance.video(user, params.id);
     const range = req.headers.range;
@@ -361,7 +361,7 @@ export function createApp({ dataDir = process.env.YANZHI_DATA_DIR || join(ROOT, 
       const m = url.pathname.match(r.re);
       const params = {};
       for (const [i, k] of r.keys.entries()) { const raw = m[i + 1]; const dec = safeDecode(raw); if (dec === null) fail(400, 'bad_encoding', '请求路径包含无效的百分号编码'); params[k] = dec; }
-      const body = req.method === 'GET' ? {} : await readJson(req, r.opts.limit || 2e6);
+      const body = req.method === 'GET' ? {} : r.opts.raw ? await readBuffer(req, r.opts.limit) : await readJson(req, r.opts.limit || 2e6);
       const out = await r.handler({ req, res, user, body, params, query: Object.fromEntries(url.searchParams), cookies, reqId });
       if (out === STREAMED || res.writableEnded) return;
       send(res, 200, out);
@@ -417,6 +417,19 @@ function readJson(req, limit) {
     req.on('error', reject);
   });
 }
+function readBuffer(req, limit) {
+  return new Promise((resolveP, reject) => {
+    if (Number(req.headers['content-length']) > limit) { req.resume(); return reject(new HttpError(413, 'too_large', '视频上限为 100MB')); }
+    let size = 0; const chunks = [];
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > limit) { chunks.length = 0; req.resume(); reject(new HttpError(413, 'too_large', '视频上限为 100MB')); }
+      else chunks.push(chunk);
+    });
+    req.on('end', () => { if (size <= limit) resolveP(Buffer.concat(chunks, size)); });
+    req.on('error', reject);
+  });
+}
 /**
  * True when `file` is inside `root`. A plain startsWith() is not enough: a
  * sibling directory whose name merely begins with the root's name would pass.
@@ -432,6 +445,10 @@ function safeDecode(value) {
 }
 
 function serveStatic(pathname, res) {
+  // Dance deployments must never expose the unrelated legacy teaching UI.
+  if (process.env.DANCE_HOME === '1' && (TEACHER_PAGES.includes(pathname) || pathname === '/index.html' || pathname === MANUAL || pathname === `${MANUAL}/`) && pathname !== '/') {
+    res.writeHead(302, { location: '/wujing' }); res.end(); return;
+  }
   let file;
   if (['/wujing','/wujing/','/wuan','/wuan/'].includes(pathname) || (pathname === '/' && process.env.DANCE_HOME === '1')) file = join(PUBLIC, 'dance', 'index.html');
   else if (pathname === '/admin' || pathname.startsWith('/admin/')) file = join(PUBLIC, 'admin.html');

@@ -1,4 +1,4 @@
-# 研思智境 / 舞安智护 —— 单容器镜像
+# 舞镜智练 / 舞安智护 —— 单容器镜像
 # 说明：本镜像不安装任何第三方运行时依赖（项目零依赖），
 # 但姿态识别需要 MediaPipe 前端资产，若不随构建上下文提供，
 # 则在构建阶段从上游获取（需构建机可访问 registry.npmjs.org 与
@@ -6,6 +6,7 @@
 FROM node:22-bookworm-slim
 
 ENV NODE_ENV=production \
+    DANCE_HOME=1 \
     HOST=0.0.0.0 \
     PORT=8787 \
     YANZHI_DATA_DIR=/app/data
@@ -33,7 +34,8 @@ RUN if [ -f public/vendor/mediapipe/vision_bundle.mjs ]; then \
       node scripts/setup-pose-assets.mjs; \
     fi \
  && node -e "const m=require('./public/vendor/mediapipe/asset-manifest.json');console.log('MediaPipe',m.version,'model',m.model_sha256.slice(0,12))" \
- && cp -f public/vendor/mediapipe/LICENSE /app/NOTICE-mediapipe-Apache-2.0.txt 2>/dev/null || true
+ && node scripts/setup-pose-assets.mjs --verify-only \
+ && cp public/vendor/mediapipe/LICENSE /app/NOTICE-mediapipe-Apache-2.0.txt
 
 # 启动自检：确认服务端模块可以加载（语法/依赖问题在构建期暴露）
 RUN node --check server/server.js && node --check server/dance/service.js && node --check server/dance/bootstrap.js

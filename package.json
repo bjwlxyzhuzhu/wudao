@@ -1,8 +1,8 @@
 {
-  "name": "yanzhi-platform",
+  "name": "wudao-platform",
   "version": "5.3.0",
   "private": true,
-  "description": "研思智境——“研—演—评—改”多智能体数字教研实验工坊（本地服务端 + 教师前台 + 管理员后台）",
+  "description": "舞蹈教学智能体：舞镜智练与舞安智护",
   "type": "module",
   "engines": {
     "node": ">=22.13"
@@ -12,8 +12,7 @@
     "init:dance": "node --env-file-if-exists=.env scripts/init-dance.mjs",
     "models:dance": "node --env-file-if-exists=.env scripts/list-dance-models.mjs",
     "setup:pose": "node scripts/setup-pose-assets.mjs",
-    "start": "node server/server.js",
-    "start:szsx": "node --env-file=szsx.env server/server.js",
+    "start": "node --env-file-if-exists=.env server/dance/start.mjs",
     "init-admin": "node server/cli.js create-admin",
     "cli": "node server/cli.js",
     "test": "node --test --test-concurrency=1 tests/*.test.js",

@@ -67,8 +67,8 @@ function privateFrame(video, landmarks, time) {
   return { time, data: canvas.toDataURL('image/jpeg', 0.75) };
 }
 
-export async function extractPose(file, { view, cloud, signal, onProgress }) {
-  if (!file || file.size > 20 * 1024 * 1024) throw new Error('请选择不超过 20MB 的练习视频');
+export async function extractPose(file, { view, captureKeyframes = false, keyframeLimit = 6, signal, onProgress }) {
+  if (!file || file.size > 100 * 1024 * 1024) throw new Error('请选择不超过 100MB 的练习视频');
   const video = document.createElement('video');
   video.muted = true; video.playsInline = true; video.preload = 'auto';
   const source = URL.createObjectURL(file);
@@ -83,17 +83,18 @@ export async function extractPose(file, { view, cloud, signal, onProgress }) {
       video.currentTime = 1e10;
       await durationReady;
     }
-    if (!Number.isFinite(video.duration) || video.duration < 3 || video.duration > 30) throw new Error('首版支持 3–30 秒单动作片段');
+    if (!Number.isFinite(video.duration) || video.duration < 3 || video.duration > 90) throw new Error('支持 3 秒至 1 分 30 秒单动作片段');
     onProgress({ percent: 4, message: '加载本地姿态模型，首次约需数秒' });
     const { FilesetResolver, PoseLandmarker } = await import('/vendor/mediapipe/vision_bundle.mjs');
     const files = await FilesetResolver.forVisionTasks('/vendor/mediapipe/wasm');
     detector = await PoseLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: '/vendor/mediapipe/pose_landmarker_lite.task', delegate: 'CPU' }, runningMode: 'VIDEO', numPoses: 2, minPoseDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     const frames = [], keyframes = [];
-    const count = Math.floor(video.duration * 10);
+    const sampleRate = video.duration > 30 ? 5 : 10;
+    const count = Math.floor(video.duration * sampleRate);
     for (let index = 0; index < count; index++) {
       if (signal?.aborted) throw new Error('已取消处理，视频未继续上传');
-      if (performance.now() - started > 90000) throw new Error('本机姿态处理超过 90 秒，请缩短片段或使用电脑');
-      const time = 0.01 + index / 10;
+      if (performance.now() - started > 180000) throw new Error('本机姿态处理超过 3 分钟，请缩短片段或使用性能更好的电脑');
+      const time = 0.01 + index / sampleRate;
       if (time >= video.duration) break;
       const seeked = eventOnce(video, 'seeked');
       video.currentTime = time;
@@ -101,7 +102,7 @@ export async function extractPose(file, { view, cloud, signal, onProgress }) {
       const result = detector.detectForVideo(video, Math.round(time * 1000));
       const landmarks = result.landmarks?.length === 1 ? result.landmarks[0].map((point) => ({ x: point.x, y: point.y, visibility: point.visibility ?? 0 })) : [];
       frames.push({ time: Number(time.toFixed(3)), people: Math.min(2, result.landmarks?.length || 0), landmarks });
-      if (cloud && landmarks.length && index % Math.max(1, Math.floor(count / 6)) === 0 && keyframes.length < 6) {
+      if (captureKeyframes && landmarks.length && index % Math.max(1, Math.floor(count / keyframeLimit)) === 0 && keyframes.length < keyframeLimit) {
         const frame = privateFrame(video, landmarks, time);
         if (frame) keyframes.push(frame);
       }

@@ -1,8 +1,9 @@
 import { extractPose, drawSkeleton } from './pose.js';
+import { computeMetrics, METRIC_VERSION } from './metrics.js';
 
 const root = document.querySelector('#app');
 const isRisk = location.pathname.startsWith('/wuan');
-const state = { user: null, catalog: null, sessions: [], health: null, tab: isRisk ? 'health' : 'home', action: 'demi-plie', file: null, videoUrl: null, pose: null, trainingId: null, report: null, busy: false, controller: null, poll: null };
+const state = { user: null, catalog: null, sessions: [], health: null, tab: isRisk ? 'health' : 'home', action: 'demi-plie', file: null, videoUrl: null, pose: null, referenceFile: null, referencePose: null, referenceMetrics: null, referenceKeyframes: [], referenceBusy: false, trainingId: null, report: null, busy: false, controller: null, poll: null };
 const labels = { POSE_PENDING: '待提取姿态', METRICS_READY: '指标已完成', AI_PROCESSING: '分析中', WAITING_REVIEW: '待教师复核', PUBLISHED: '老师已确认', NEEDS_RECAPTURE: '需要重拍', WITHDRAWN: '已撤回' };
 const escape = (value = '') => String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 const roleName = (role) => ({ student: '学生空间', teacher: '舞蹈教师', medic: '风险复核教师' }[role] || '未登录');
@@ -11,10 +12,10 @@ const formatTime = (value) => new Date(value).toLocaleString('zh-CN', { month: '
 const actionFallback = [
   { key: 'first-position', title: '一位站姿', tag: '静态基准 · 身体轴线', view: 'front' },
   { key: 'second-position', title: '二位站姿', tag: '静态基准 · 对称控制', view: 'front' },
-  { key: 'demi-plie', title: '二位 plié 蹲', tag: '核心慢速基训 · 下肢控制', view: 'front' },
-  { key: 'tendu', title: 'Tendu 擦地', tag: '核心慢速基训 · 腿部延伸', view: 'front' },
-  { key: 'passe', title: 'Passé 静态吸腿', tag: '单腿承重 · 平衡控制', view: 'front' },
-  { key: 'degage', title: 'Dégagé 小踢腿', tag: '单腿承重 · 动态控制', view: 'side' },
+  { key: 'demi-plie', title: '蹲', tag: '核心慢速基训 · 下肢控制', view: 'front' },
+  { key: 'tendu', title: '擦地', tag: '核心慢速基训 · 腿部延伸', view: 'front' },
+  { key: 'passe', title: '单腿蹲', tag: '单腿承重 · 平衡控制', view: 'front' },
+  { key: 'degage', title: '控制', tag: '单腿承重 · 动态控制', view: 'side' },
 ];
 const actions = () => state.catalog?.actions || actionFallback;
 const action = () => actions().find((item) => item.key === state.action) || actions()[0];
@@ -27,6 +28,53 @@ async function api(method, path, body) {
     throw new Error(value.error?.message || '请求失败');
   }
   return value;
+}
+
+async function uploadVideo(path, file) {
+  const response = await fetch(`/api/dance${path}`, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': file.type || 'video/mp4', 'x-yz-csrf': '1' }, body: file });
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error?.message || '视频上传失败');
+  return value;
+}
+
+async function reanalyzeSavedVideo(report) {
+  if (!report.video_url) throw new Error('这条练习没有保存原视频，请重新选择视频');
+  state.busy = true;
+  state.controller = new AbortController();
+  state.trainingId = report.training_id;
+  render();
+  try {
+    const response = await fetch(report.video_url, { credentials: 'same-origin', signal: state.controller.signal });
+    if (!response.ok) throw new Error('已保存的视频暂时无法读取，请重新选择视频');
+    const blob = await response.blob();
+    const type = blob.type || 'video/mp4';
+    const extension = ({ 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' })[type] || 'mp4';
+    const file = new File([blob], `dance-retry.${extension}`, { type });
+    if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
+    state.file = file;
+    state.videoUrl = URL.createObjectURL(file);
+    const extracted = await extractPose(file, {
+      view: report.standard.view,
+      captureKeyframes: !!(report.consent_cloud && state.catalog?.vision_configured),
+      keyframeLimit: 6,
+      signal: state.controller.signal,
+      onProgress: ({ percent, message }) => {
+        const label = document.querySelector('#saved-retry-message');
+        const progress = document.querySelector('#saved-retry-progress');
+        if (label) label.textContent = message;
+        if (progress) progress.value = percent;
+      },
+    });
+    state.pose = extracted.pose;
+    state.report = await api('POST', `/sessions/${report.training_id}/pose`, extracted.pose);
+    if (state.report.status !== 'METRICS_READY') {
+      throw new Error(state.report.metrics?.flags?.join('；') || '本次姿态质量仍不足，请检查视频画面');
+    }
+    state.report = await api('POST', `/sessions/${report.training_id}/analyze`, { keyframes: extracted.keyframes });
+  } finally {
+    state.busy = false;
+    render();
+  }
 }
 
 let toastTimer;
@@ -50,6 +98,19 @@ function shell(content) {
   const navigation = isRisk ? [['health','今日状态'],['loads','训练负荷']] : state.user?.role === 'teacher' ? [['home','工作台'],['standards','动作标准'],['review','训练复核'],['history','训练记录']] : [['home','今天练什么'],['practice','开始练习'],['history','成长记录']];
   document.body.classList.toggle('risk-page', isRisk);
   document.title = isRisk ? '舞安智护 · 科学训练，从了解自己开始' : '舞镜智练 · 让每一次练习看得见';
+  content = content.replaceAll('3–30 秒', '3 秒至 1 分 30 秒').replaceAll('3—30 秒', '3 秒至 1 分 30 秒').replace('20 MB 以内', '100 MB 以内').replace('不超过 20 MB', '不超过 100 MB')
+    .replace('本机提取姿态角度，只保存统计数据，不上传或留存原视频。', '本机提取角度；保存统计和最多 3 张遮脸示范帧用于授权 AI 对照，不保存原视频。')
+    .replace('向云端模型发送最多 6 张遮挡面部的关键帧。', '勾选后向千问发送最多 6 张遮脸学生关键帧，与老师示范关键帧和角度统计对照。')
+    .replace('<span class="step-no">4</span>授权</h2>', '<span class="step-no">4</span>AI 云端分析与授权</h2><p class="cloud-consent-intro">勾选千问分析后，上传完成且骨架检测合格时会自动调用 AI；不勾选则只做本机姿态分析。</p>')
+    .replace('勾选后向千问发送最多 6 张遮脸学生关键帧，与老师示范关键帧和角度统计对照。遮挡不能保证完全匿名。', '<b>授权本次调用千问 AI</b>　发送最多 6 张遮脸关键帧，对照老师示范与角度统计。遮脸不保证完全匿名。')
+    .replace('当前没有配置视觉模型，这一项不可用，只做本机指标分析。', '千问视觉模型暂未启用，当前不能进行云端分析；请管理员在模型设置中配置千问视觉模型。')
+    .replace('勾选千问分析后，上传完成且骨架检测合格时会自动调用 AI；不勾选则只做本机姿态分析。', state.catalog?.vision_configured ? '勾选后，上传完成且骨架检测合格时会自动调用千问；不勾选则只做本机姿态分析。' : '千问视觉模型当前未启用，因此云端分析不可选；请管理员先完成模型配置。');
+  if (state.report?.status === 'NEEDS_RECAPTURE' && state.report.video_url && state.report.metrics?.version !== METRIC_VERSION) {
+    const oldFlags = (state.report.metrics?.flags || []).map(escape).join('<br>');
+    if (oldFlags) content = content.replace(`<div class="notice warning">${oldFlags}</div>`, '');
+  } else {
+    content = content.replaceAll('检测到多人或镜像，已排除相应帧', '这是旧版检测结果。模型只统计人体候选，没有识别镜子；请重新选择视频按新版规则检测。');
+  }
   root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="${isRisk ? '/wuan' : '/wujing'}"><img src="/dance/mark.svg" alt=""><div><b>${isRisk ? '舞安智护' : '舞镜智练'}</b><small>${isRisk ? '训练健康' : '舞蹈技能训练'}</small></div></a>${state.user ? `<nav class="nav" aria-label="主导航">${navigation.map(([target,label]) => `<button data-tab="${target}" class="${state.tab === target ? 'active' : ''}" ${state.tab === target ? 'aria-current="page"' : ''} ${state.busy ? 'disabled' : ''}>${label}</button>`).join('')}</nav>` : ''}<div class="sidebar-bottom"><a class="product-link" href="${isRisk ? '/wujing' : '/wuan'}">切换到${isRisk ? '舞镜智练' : '舞安智护'}<small>${isRisk ? '技能训练' : '训练健康打卡'}</small></a>${state.user ? `<div class="profile"><div class="avatar" aria-hidden="true">${escape(state.user.name?.slice(0,1) || '舞')}</div><div><b>${escape(state.user.name)}</b><small>${roleName(state.user.role)}</small></div></div><button class="link-button" data-command="logout">退出账号</button>` : ''}</div></aside><main class="main" id="main"><header class="topbar"><span class="date">${today()}</span></header>${content}<footer class="footer-note">${isRisk ? '训练状态记录与健康教育，不能替代医生诊断。' : '姿态指标是教学参考，正式反馈由老师确认。'}</footer></main></div>`;
   if (state.user) {
     const account = document.createElement('button');
@@ -68,6 +129,12 @@ function heading(title, description = '') {
 
 function sessionRows(sessions, emptyText = '还没有练习记录', emptyHint = '选一个动作，录下第一轮练习。') {
   return sessions.length ? `<div class="rows">${sessions.map((session) => `<button class="session-row" data-session="${session.training_id}"><span class="row-main"><b>${escape(session.standard.title)}</b><small>${escape(session.student_code)}　${formatTime(session.created_at)}　标准 v${session.standard.version}</small></span>${statusTag(session.status)}<span class="row-go">查看</span></button>`).join('')}</div>` : `<div class="empty"><p>${emptyText}</p><small>${emptyHint}</small></div>`;
+}
+
+function referenceSummary(metrics) {
+  if (!metrics) return '<p class="hint">还没有教师参考数据。添加示范视频后，千问可对照参考角度统计辅助分析。</p>';
+  const readings = Object.values(metrics.metrics || {}).filter((metric) => !metric.uncertain && metric.value !== null).map((metric) => `${escape(metric.label)} ${metric.value.toFixed(metric.unit === '°' ? 1 : 3)}${escape(metric.unit)}`);
+  return `<p class="reference-result">已提取 ${metrics.valid_frames} 个有效帧 · ${readings.join(' / ') || '无可用角度数据'}</p>`;
 }
 
 function checkpointList(standard, fallback) {
@@ -103,7 +170,15 @@ function standards() {
   if (state.user?.role !== 'teacher') return home();
   const chosen = action(), standard = chosen.standard;
   const view = standard?.view || chosen.view;
-  shell(`${heading(standard ? `修改动作标准：${escape(chosen.title)}` : `发布动作标准：${escape(chosen.title)}`, '发布后固定为一个版本。已经提交的练习继续使用当时的版本。')}<div class="editor"><section class="panel"><form id="standard-form"><label class="field">练习动作<select name="action_key" id="standard-action">${actions().map((item) => `<option value="${item.key}" ${chosen.key===item.key?'selected':''}>${escape(item.title)}${item.standard ? `（已发布 v${item.standard.version}）` : '（未发布）'}</option>`).join('')}</select></label><div class="two-fields"><label class="field">动作名称<input name="title" required maxlength="80" value="${escape(standard?.title || chosen.title)}" data-preview="title"></label><label class="field">拍摄视角<select name="view" data-preview="view"><option value="front" ${view==='front'?'selected':''}>正面</option><option value="side" ${view==='side'?'selected':''}>侧面</option></select></label></div><label class="field">教学要求与安全边界<textarea name="instructions" maxlength="2000" required data-preview="instructions" placeholder="写清完成要求、需要保持的阶段，以及出现什么情况要立即停止">${escape(standard?.instructions || '')}</textarea></label><label class="field">检查点<span class="field-hint">每行一项，最多 6 项。写能在视频里看到的动作，比如“下蹲时膝盖朝向脚尖”。</span><textarea name="checkpoints" rows="6" required data-preview="checkpoints" placeholder="准备姿势站稳，双脚外开&#10;下蹲时膝盖朝向脚尖&#10;还原时躯干保持直立">${escape(standard?.checkpoints?.join('\n') || '')}</textarea></label><label class="check"><input type="checkbox" name="confirm" required><span>我已审核以上要求，发布给本班学生使用。</span></label><button class="primary" type="submit">${standard ? `发布新版本 v${standard.version + 1}` : '发布动作标准'}</button></form></section><aside class="preview" aria-live="polite"><h2>学生将看到</h2><div class="preview-card"><div class="preview-figure">${dancer(actions().indexOf(chosen))}</div><h3 data-out="title">${escape(standard?.title || chosen.title)}</h3><p class="feature-meta" data-out="view">${viewName(view)}</p><p data-out="instructions" class="preview-text">${escape(standard?.instructions || '') || '<span class="placeholder">教学要求会显示在这里</span>'}</p><ol class="checkpoints" data-out="checkpoints">${(standard?.checkpoints || []).map((item) => `<li>${escape(item)}</li>`).join('') || '<li class="placeholder">检查点会逐条显示在这里</li>'}</ol></div><p class="aside-note">指标只是几何测量，不能代替你的专业判断，所以不需要填写自动评分的阈值。教师示范视频与自动时序对齐还在后续开发中。</p></aside></div>`);
+  const currentReference = standard?.view === view ? standard?.reference_metrics : null;
+  const reference = state.referenceMetrics || currentReference;
+  const referenceStatus = state.referenceBusy ? '正在本机提取…' : state.referencePose ? '新示范数据已就绪，将保存角度统计和遮脸对照帧。' : state.referenceFile ? `${escape(state.referenceFile.name)} · 请先提取` : currentReference ? (standard?.reference_frame_count ? `本版本已保存角度统计和 ${standard.reference_frame_count} 张遮脸对照帧；不选择新视频时，新版本会沿用。` : '本版本只有角度统计。若要让千问直接对照示范画面，请重新选择示范视频并发布新版本。') : standard?.reference_metrics ? '拍摄视角已更改，请上传匹配视角的新示范视频。' : '尚未添加；可稍后补到下一版标准。';
+  shell(`${heading(standard ? `修改动作标准：${escape(chosen.title)}` : `发布动作标准：${escape(chosen.title)}`, '发布后固定为一个版本。已经提交的练习继续使用当时的版本。')}<div class="editor"><section class="panel"><form id="standard-form"><label class="field">练习动作<select name="action_key" id="standard-action">${actions().map((item) => `<option value="${item.key}" ${chosen.key===item.key?'selected':''}>${escape(item.title)}${item.standard ? `（已发布 v${item.standard.version}）` : '（未发布）'}</option>`).join('')}</select></label><div class="two-fields"><label class="field">动作名称<input name="title" required maxlength="80" value="${escape(standard?.title || chosen.title)}" data-preview="title"></label><label class="field">拍摄视角<select name="view" data-preview="view"><option value="front" ${view==='front'?'selected':''}>正面</option><option value="side" ${view==='side'?'selected':''}>侧面</option></select></label></div><label class="field">教学要求与安全边界<textarea name="instructions" maxlength="2000" required data-preview="instructions" placeholder="写清完成要求、需要保持的阶段，以及出现什么情况要立即停止">${escape(standard?.instructions || '')}</textarea></label><label class="field">检查点<span class="field-hint">每行一项，最多 6 项。写能在视频里看到的动作，比如“下蹲时膝盖朝向脚尖”。</span><textarea name="checkpoints" rows="6" required data-preview="checkpoints" placeholder="准备姿势站稳，双脚外开&#10;下蹲时膝盖朝向脚尖&#10;还原时躯干保持直立">${escape(standard?.checkpoints?.join('\n') || '')}</textarea></label><section class="reference-block"><h2>教师示范视频</h2><p class="field-hint">选择 3–30 秒、20 MB 以内的单人视频。本机提取姿态角度，只保存统计数据，不上传或留存原视频。</p><label class="file-button ${state.referenceBusy?'disabled':''}"><input id="standard-video" type="file" accept="video/mp4,video/webm,video/quicktime" ${state.referenceBusy?'disabled':''}><span>${state.referenceFile ? '更换示范视频' : '选择示范视频'}</span></label><button type="button" class="secondary" data-command="extract-reference" ${!state.referenceFile||state.referenceBusy?'disabled':''}>${state.referenceBusy?'正在提取…':'提取参考数据'}</button><p class="hint" id="reference-status">${referenceStatus}</p>${state.referenceBusy?'<div class="progress-wrap"><p id="reference-progress-label">准备处理…</p><progress id="reference-progress" max="100" value="0"></progress></div>':''}${referenceSummary(reference)}</section><label class="check"><input type="checkbox" name="confirm" required><span>我已审核以上要求，发布给本班学生使用。</span></label><button class="primary" type="submit" ${state.referenceBusy?'disabled':''}>${standard ? `发布新版本 v${standard.version + 1}` : '发布动作标准'}</button></form></section><aside class="preview" aria-live="polite"><h2>学生将看到</h2><div class="preview-card"><div class="preview-figure">${dancer(actions().indexOf(chosen))}</div><h3 data-out="title">${escape(standard?.title || chosen.title)}</h3><p class="feature-meta" data-out="view">${viewName(view)}</p><p data-out="instructions" class="preview-text">${escape(standard?.instructions || '') || '<span class="placeholder">教学要求会显示在这里</span>'}</p><ol class="checkpoints" data-out="checkpoints">${(standard?.checkpoints || []).map((item)=>`<li>${escape(item)}</li>`).join('') || '<li class="placeholder">检查点会逐条显示在这里</li>'}</ol></div><p class="aside-note">示范统计可作为动作参考，不代表标准答案或医学结论；正式反馈仍由你审核。</p></aside></div>`);
+  if (state.referenceFile) {
+    if (!state.referenceVideoUrl) state.referenceVideoUrl = URL.createObjectURL(state.referenceFile);
+    document.querySelector('.preview').insertAdjacentHTML('afterbegin', `<section class="reference-visual"><h2>教师示范 · 骨架预览</h2><div class="video-stage"><video id="reference-preview-video" src="${escape(state.referenceVideoUrl)}" controls muted playsinline></video><canvas id="reference-pose-overlay" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas></div><p class="hint">${state.referencePose ? '播放示范视频，查看实际提取的骨架随动作变化。' : '点击“提取参考数据”后显示骨架；原片仅在本机预览。'}</p></section>`);
+    wireReferenceVideo();
+  }
 }
 
 function practice() {
@@ -121,6 +196,9 @@ function metricCards(report) {
 
 function recovery(report) {
   if (state.user.role !== 'student') return '';
+  if (report.status === 'NEEDS_RECAPTURE' && report.video_url && report.metrics?.version !== METRIC_VERSION) {
+    return `<div class="notice action-notice"><div><b>${state.busy ? '正在按新版规则重新分析已上传视频' : '这条旧记录已保存原视频'}</b><p class="hint">${state.busy ? '视频只在本机重新提取；完成后会自动提交千问。' : '打开这条记录时会直接重算并提交千问，无需再次选择文件。'}</p>${state.busy ? '<div class="progress-wrap"><p id="saved-retry-message">准备读取已保存视频…</p><progress id="saved-retry-progress" max="100" value="0"></progress></div>' : ''}</div>${state.busy ? '<button data-command="cancel">取消</button>' : '<span class="tag tone-wait">待重新分析</span>'}</div>`;
+  }
   if (report.status === 'METRICS_READY') return '<div class="notice action-notice"><span>姿态指标已保存。不发送关键帧也可以直接提交老师复核。</span><button class="primary" data-command="resume-analysis">提交老师复核</button></div>';
   if (report.status === 'POSE_PENDING') return '<div class="notice warning">这一轮的姿态没有提取完成。请重新选择视频开始一轮，或撤回这条空记录。</div>';
   return '';
@@ -138,10 +216,11 @@ function reportPage() {
   const report = state.report;
   if (!report) return history();
   const feedback = report.feedback[0], teacher = state.user.role === 'teacher';
-  const local = state.trainingId === report.training_id ? state.videoUrl : null;
+  const local = !teacher && state.trainingId === report.training_id ? state.videoUrl : null;
   const video = local || report.video_url;
+  const videoCaption = teacher && video ? '<p class="hint">学生本次授权保存的练习视频</p>' : '';
   const agentState = { completed: '已完成，待老师判定', failed: '未完成，已降级', skipped: '未调用' };
-  shell(`<div class="page-heading report-head"><div><h1>${escape(report.standard.title)}</h1><p>${escape(report.student_code)}　${formatTime(report.created_at)}　标准 v${report.standard.version}</p></div>${statusTag(report.status)}</div>${recovery(report)}<div class="report"><section><div class="video-stage">${video?`<video id="practice-video" src="${escape(video)}" controls playsinline></video>${local?'<canvas id="pose-overlay"></canvas>':''}`:`<div class="video-placeholder">${dancer()}<p>${report.status==='WITHDRAWN'?'这次的授权已撤回':'原视频没有保存到服务器'}</p><small>这是动作示意，不是本次的分析结果</small></div>`}</div><div class="panel-head spaced"><h2>动作指标</h2><small>姿态测量，不是医学测量</small></div>${metricCards(report)}${report.metrics?.flags?.length?`<div class="notice warning">${report.metrics.flags.map(escape).join('<br>')}</div>`:''}<div class="panel-head spaced"><h2>分析进度</h2><small>${report.analysis?.mode==='multimodal'?'AI 辅助，结论以老师为准':'以实际分析状态为准'}</small></div><ul class="agents">${(report.analysis?.agents||state.catalog.roles).map((agent)=>`<li class="agent st-${agent.status || 'none'}"><span class="dot" aria-hidden="true"></span><span>${escape(agent.label)}</span><small>${agentState[agent.status]||'尚未调用'}</small></li>`).join('')}</ul><p class="hint">${escape(report.analysis?.message || (report.status==='AI_PROCESSING'?'后台正在分析，可以稍后从记录页回来查看。':'姿态提取完成后才能进入分析和复核。'))}</p>${complianceCard(report, teacher)}${teacher && report.analysis?.agents?.some((agent)=>agent.findings?.length)?`<section class="panel drafts"><h2>AI 草稿与证据</h2>${report.analysis.agents.flatMap((agent)=>(agent.findings||[]).map((finding)=>`<div class="finding"><small>${escape(agent.label)}　${finding.uncertain?'不确定':'待复核'}</small><p>${escape(finding.text)}</p><small>证据：${finding.evidence.map(escape).join('、')}</small></div>`)).join('')}</section>`:''}</section><section class="report-side"><div class="panel feedback ${feedback ? 'has-feedback' : ''}"><h2>${feedback?'老师的反馈':'等待老师复核'}</h2>${feedback?`<small>反馈 v${feedback.version}　${formatTime(feedback.created_at)}</small><h3>做得好的地方</h3><ul class="feedback-list">${feedback.strengths.map((item)=>`<li>${escape(item)}</li>`).join('')||'<li>本轮未单独填写</li>'}</ul><h3>这一轮优先改进</h3><ol class="feedback-list">${feedback.priorities.map((item)=>`<li>${escape(item)}</li>`).join('')||'<li>本轮没有新增的优先项</li>'}</ol><div class="next-drill"><h3>下一轮练习</h3><p>${escape(feedback.next_drill)}</p></div>`:'<p class="muted">AI 草稿不会直接作为正式评价。老师会结合视频、指标和教学要求确认后发布。</p>'}${!teacher && report.status!=='WITHDRAWN'?`<button class="primary wide" data-action="${escape(report.standard.action_key)}">再练一次</button>`:''}</div>${teacher&&['WAITING_REVIEW','PUBLISHED'].includes(report.status)?`<div class="panel"><h2>${feedback ? '修改并重新发布' : '复核并发布反馈'}</h2><form id="review-form"><label class="field">对 AI 建议的处理<select name="decision"><option value="modify">我独立填写或修改</option><option value="adopt">采纳 AI 建议</option><option value="reject">否决 AI 建议并补充</option></select></label><label class="field">做得好的地方<span class="field-hint">每行一项，最多两项</span><textarea name="strengths">${escape(feedback?.strengths.join('\n')||'')}</textarea></label><label class="field">优先改进<span class="field-hint">每行一项，最多三项</span><textarea name="priorities">${escape(feedback?.priorities.join('\n')||'')}</textarea></label><label class="field">下一轮练习提示<textarea name="next_drill" required maxlength="1000">${escape(feedback?.next_drill||'')}</textarea></label><button class="primary wide" type="submit">发布反馈</button></form></div>`:''}${!teacher&&report.status!=='WITHDRAWN'?'<button class="link-button danger" data-command="withdraw">撤回这次授权并删除分析数据</button>':''}</section></div>`);
+  shell(`<div class="page-heading report-head"><div><h1>${escape(report.standard.title)}</h1><p>${escape(report.student_code)}　${formatTime(report.created_at)}　标准 v${report.standard.version}</p></div>${statusTag(report.status)}</div>${recovery(report)}<div class="report"><section>${videoCaption}<div class="video-stage">${video?`<video id="practice-video" src="${escape(video)}" controls playsinline></video>${local?'<canvas id="pose-overlay"></canvas>':''}`:`<div class="video-placeholder">${dancer()}<p>${report.status==='WITHDRAWN'?'这次的授权已撤回':teacher?'学生本次练习视频未授权保存或已过期':'原视频没有保存到服务器'}</p><small>这是动作示意，不是本次的分析结果</small></div>`}</div><div class="panel-head spaced"><h2>动作指标</h2><small>姿态测量，不是医学测量</small></div>${metricCards(report)}${report.metrics?.flags?.length?`<div class="notice warning">${report.metrics.flags.map(escape).join('<br>')}</div>`:''}<div class="panel-head spaced"><h2>分析进度</h2><small>${report.analysis?.mode==='multimodal'?'AI 辅助，结论以老师为准':'以实际分析状态为准'}</small></div><ul class="agents">${(report.analysis?.agents||state.catalog.roles).map((agent)=>`<li class="agent st-${agent.status || 'none'}"><span class="dot" aria-hidden="true"></span><span>${escape(agent.label)}</span><small>${agentState[agent.status]||'未调用'}</small></li>`).join('')}</ul><p class="hint">${escape(report.analysis?.message || (report.status==='AI_PROCESSING'?'后台正在分析，可以稍后从记录页回来查看。':'姿态提取完成后才能进入分析和复核。'))}</p>${complianceCard(report, teacher)}${teacher && report.analysis?.agents?.some((agent)=>agent.findings?.length)?`<section class="panel drafts"><h2>AI 草稿与证据</h2>${report.analysis.agents.flatMap((agent)=>(agent.findings||[]).map((finding)=>`<div class="finding"><small>${escape(agent.label)}　${finding.uncertain?'不确定':'待复核'}</small><p>${escape(finding.text)}</p><small>证据：${finding.evidence.map(escape).join('、')}</small></div>`)).join('')}</section>`:''}</section><section class="report-side"><div class="panel feedback ${feedback ? 'has-feedback' : ''}"><h2>${feedback?'老师的反馈':'等待老师复核'}</h2>${feedback?`<small>反馈 v${feedback.version}　${formatTime(feedback.created_at)}</small><h3>做得好的地方</h3><ul class="feedback-list">${feedback.strengths.map((item)=>`<li>${escape(item)}</li>`).join('')||'<li>本轮未单独填写</li>'}</ul><h3>这一轮优先改进</h3><ol class="feedback-list">${feedback.priorities.map((item)=>`<li>${escape(item)}</li>`).join('')||'<li>本轮没有新增的优先项</li>'}</ol><div class="next-drill"><h3>下一轮练习</h3><p>${escape(feedback.next_drill)}</p></div>`:'<p class="muted">AI 草稿不会直接作为正式评价。老师会结合视频、指标和教学要求确认后发布。</p>'}${!teacher && report.status!=='WITHDRAWN'?`<button class="primary wide" data-action="${escape(report.standard.action_key)}">再练一次</button>`:''}</div>${teacher&&['WAITING_REVIEW','PUBLISHED'].includes(report.status)?`<div class="panel"><h2>${feedback ? '修改并重新发布' : '复核并发布反馈'}</h2><form id="review-form"><label class="field">对 AI 建议的处理<select name="decision"><option value="modify">我独立填写或修改</option><option value="adopt">采纳 AI 建议</option><option value="reject">否决 AI 建议并补充</option></select></label><label class="field">做得好的地方<span class="field-hint">每行一项，最多两项</span><textarea name="strengths">${escape(feedback?.strengths.join('\n')||'')}</textarea></label><label class="field">优先改进<span class="field-hint">每行一项，最多三项</span><textarea name="priorities">${escape(feedback?.priorities.join('\n')||'')}</textarea></label><label class="field">下一轮练习提示<textarea name="next_drill" required maxlength="1000">${escape(feedback?.next_drill||'')}</textarea></label><button class="primary wide" type="submit">发布反馈</button></form></div>`:''}${!teacher&&report.status!=='WITHDRAWN'?'<button class="link-button danger" data-command="withdraw">撤回这次授权并删除分析数据</button>':''}</section></div>`);
   clearTimeout(state.poll);
   if (report.status==='AI_PROCESSING') state.poll=setTimeout(async()=>{try{state.report=await api('GET',`/sessions/${report.training_id}`);if(state.tab==='report')reportPage();}catch(error){toast(error.message);}},2000);
 }
@@ -188,6 +267,21 @@ async function refresh() {
   if(isRisk&&state.user.role!=='teacher')state.health=await api('GET','/health');
 }
 
+function wireReferenceVideo() {
+  const video = document.querySelector('#reference-preview-video'), canvas = document.querySelector('#reference-pose-overlay');
+  if (!video || !canvas) return;
+  const update = () => {
+    const pose = state.referencePose;
+    if (!pose?.frames?.length) { canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); return; }
+    const frame = pose.frames.reduce((closest, entry) => Math.abs(entry.time - video.currentTime) < Math.abs(closest.time - video.currentTime) ? entry : closest, pose.frames[0]);
+    drawSkeleton(canvas, frame.landmarks, pose.width, pose.height);
+  };
+  video.addEventListener('timeupdate', update);
+  video.addEventListener('seeked', update);
+  video.addEventListener('loadedmetadata', update);
+  update();
+}
+
 function wireVideo() {
   const video=document.querySelector('#practice-video'),canvas=document.querySelector('#pose-overlay');
   if(!video||!canvas||!state.pose)return;
@@ -195,15 +289,19 @@ function wireVideo() {
   video.addEventListener('timeupdate',update);video.addEventListener('loadedmetadata',update);update();
 }
 
-function fileData(file) {
-  return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=()=>reject(new Error('视频读取失败'));reader.readAsDataURL(file);});
-}
-
 root.addEventListener('change',(event)=>{
-  if(['practice-action','standard-action'].includes(event.target.id)){state.action=event.target.value;render();}
+  if(['practice-action','standard-action'].includes(event.target.id)){
+    if(event.target.id==='standard-action'){if(state.referenceVideoUrl)URL.revokeObjectURL(state.referenceVideoUrl);state.referenceVideoUrl=null;state.referenceFile=null;state.referencePose=null;state.referenceMetrics=null;state.referenceKeyframes=[];}
+    state.action=event.target.value;render();
+  }
+  if(event.target.id==='standard-video'){
+    if(state.referenceVideoUrl)URL.revokeObjectURL(state.referenceVideoUrl);state.referenceVideoUrl=null;
+    state.referenceFile=event.target.files?.[0]||null;state.referencePose=null;state.referenceMetrics=null;state.referenceKeyframes=[];render();
+  }
+      if(event.target.dataset?.preview==='view'&&state.referencePose?.view!==event.target.value){state.referencePose=null;state.referenceMetrics=null;state.referenceKeyframes=[];}
   if(event.target.id==='video-file'){
     const file=event.target.files[0];if(!file)return;
-    if(file.size>20*1024*1024){toast('请使用不超过 20MB 的视频');return;}
+    if(file.size>100*1024*1024){toast('请使用不超过 100MB 的视频');return;}
     if(state.videoUrl)URL.revokeObjectURL(state.videoUrl);
     state.file=file;state.videoUrl=URL.createObjectURL(file);state.pose=null;state.trainingId=null;render();
   }
@@ -226,9 +324,20 @@ root.addEventListener('click',async(event)=>{
     if(button.dataset.tab){clearTimeout(state.poll);state.tab=button.dataset.tab;if(state.user&&['history','review','home'].includes(state.tab))await refresh();render();}
     if(button.dataset.pick){state.action=button.dataset.pick;home();document.querySelector('.feature')?.scrollIntoView({block:'nearest'});return;}
     if(button.dataset.action){state.action=button.dataset.action;state.tab=state.user?.role==='teacher'?'standards':'practice';render();}
-    if(button.dataset.session){state.report=await api('GET',`/sessions/${button.dataset.session}`);state.tab='report';render();}
-    if(button.dataset.command==='logout'){clearTimeout(state.poll);state.controller?.abort();await api('POST','/auth/logout');state.user=null;state.sessions=[];state.catalog=null;state.health=null;state.report=null;state.pose=null;state.file=null;if(state.videoUrl)URL.revokeObjectURL(state.videoUrl);state.videoUrl=null;state.tab='login';render();}
+    if(button.dataset.session){state.report=await api('GET',`/sessions/${button.dataset.session}`);state.tab='report';if(state.report.status==='NEEDS_RECAPTURE'&&state.report.video_url&&state.report.metrics?.version!==METRIC_VERSION)await reanalyzeSavedVideo(state.report);else render();}
+    if(button.dataset.command==='logout'){clearTimeout(state.poll);state.controller?.abort();await api('POST','/auth/logout');state.user=null;state.sessions=[];state.catalog=null;state.health=null;state.report=null;state.pose=null;state.file=null;state.trainingId=null;if(state.videoUrl)URL.revokeObjectURL(state.videoUrl);state.videoUrl=null;state.tab='login';render();}
     if(button.dataset.command==='cancel')state.controller?.abort();
+    if(button.dataset.command==='extract-reference'){
+      const file=state.referenceFile,view=document.querySelector('#standard-form [name="view"]')?.value||action().view;
+      if(!file)throw new Error('请先选择教师示范视频');
+      state.referenceBusy=true;render();
+      try{
+        const extracted=await extractPose(file,{view,captureKeyframes:true,keyframeLimit:3,onProgress:({percent,message})=>{const label=document.querySelector('#reference-progress-label'),progress=document.querySelector('#reference-progress');if(label)label.textContent=message;if(progress)progress.value=percent;}});
+        const metrics=computeMetrics(extracted.pose);
+        if(!metrics.reliable)throw new Error('示范视频姿态质量不足，请调整机位后重试');
+        state.referencePose=extracted.pose;state.referenceMetrics=metrics;state.referenceKeyframes=extracted.keyframes;toast('教师示范角度与对照帧已提取');
+      }finally{state.referenceBusy=false;render();}
+    }
     if(button.dataset.command==='resume-analysis'){state.report=await api('POST',`/sessions/${state.report.training_id}/analyze`,{keyframes:[]});render();}
     if(button.dataset.command==='withdraw'&&confirm('撤回本次教学授权，并删除原视频、姿态及反馈？')){await api('POST',`/sessions/${state.report.training_id}/withdraw`);state.report=await api('GET',`/sessions/${state.report.training_id}`);if(state.trainingId===state.report.training_id){state.pose=null;state.trainingId=null;if(state.videoUrl)URL.revokeObjectURL(state.videoUrl);state.videoUrl=null;state.file=null;}render();toast('本次分析数据已删除');}
     if(button.dataset.command==='withdraw-health'&&confirm('撤回健康授权并删除全部健康和负荷记录？')){await api('POST','/health/withdraw');await refresh();render();toast('健康与负荷记录已删除');}
@@ -244,7 +353,8 @@ root.addEventListener('submit',async(event)=>{
     if(form.id==='login-form'){
       await api('POST','/auth/login',{login:data.get('login'),password:data.get('password')});await refresh();state.tab=isRisk?'health':'home';render();
     }else if(form.id==='standard-form'){
-      await api('POST','/standards',{action_key:data.get('action_key'),title:data.get('title'),view:data.get('view'),instructions:data.get('instructions'),checkpoints:lines('checkpoints'),confirm:data.get('confirm')==='on'});await refresh();render();toast('动作标准已发布');
+      if(state.referenceFile&&!state.referencePose)throw new Error('请先提取新选择的示范视频参考数据');
+      await api('POST','/standards',{action_key:data.get('action_key'),title:data.get('title'),view:data.get('view'),instructions:data.get('instructions'),checkpoints:lines('checkpoints'),confirm:data.get('confirm')==='on',reference_pose:state.referencePose||undefined,reference_keyframes:state.referenceKeyframes});state.referenceFile=null;state.referencePose=null;state.referenceMetrics=null;state.referenceKeyframes=[];await refresh();render();toast('动作标准已发布');
     }else if(form.id==='review-form'){
       state.report=await api('POST',`/sessions/${state.report.training_id}/reviews`,{decision:data.get('decision'),strengths:lines('strengths'),priorities:lines('priorities'),next_drill:data.get('next_drill'),expected_version:state.report.feedback[0]?.version||0});render();toast('反馈已发布，学生现在可以查看');
     }else if(form.id==='health-form'){
@@ -258,14 +368,14 @@ root.addEventListener('submit',async(event)=>{
       state.busy=true;state.controller=new AbortController();
       const standard=action().standard;
       state.report=null;state.trainingId=null;render();
-      const extracted=await extractPose(state.file,{view:standard.view,cloud,signal:state.controller.signal,onProgress:({percent,message})=>{const label=document.querySelector('#progress-message'),progress=document.querySelector('#pose-progress');if(label)label.textContent=message;if(progress)progress.value=percent;}});
+      const extracted=await extractPose(state.file,{view:standard.view,captureKeyframes:cloud,keyframeLimit:6,signal:state.controller.signal,onProgress:({percent,message})=>{const label=document.querySelector('#progress-message'),progress=document.querySelector('#pose-progress');if(label)label.textContent=message;if(progress)progress.value=percent;}});
       state.pose=extracted.pose;
       if(state.controller.signal.aborted)throw new Error('已取消本机处理');
       const created=await api('POST','/sessions',{standard_id:standard.standard_id,idempotency_key:crypto.randomUUID(),consent_teaching:data.get('teaching')==='on',consent_cloud:cloud,consent_video:saveVideo});
       state.trainingId=created.training_id;
       state.report=await api('POST',`/sessions/${state.trainingId}/pose`,extracted.pose);
       if(saveVideo&&!state.controller.signal.aborted){
-        try{state.report=await api('POST',`/sessions/${state.trainingId}/video`,{type:state.file.type||'video/mp4',data:await fileData(state.file)});}
+        try{state.report=await uploadVideo(`/sessions/${state.trainingId}/video`,state.file);}
         catch(error){toast(`原视频未保存：${error.message}；姿态指标仍可提交复核。`);}
       }
       if(state.report.status==='METRICS_READY'&&!state.controller.signal.aborted)state.report=await api('POST',`/sessions/${state.trainingId}/analyze`,{keyframes:extracted.keyframes});

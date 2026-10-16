@@ -7,10 +7,10 @@ import { analyzeTraining, ROLES } from './analysis.js';
 export const ACTIONS = [
   { key: 'first-position', title: '一位站姿', tag: '静态基准 · 身体轴线', view: 'front', description: '观察肩胯水平、躯干中立、双腿排列和站立稳定性。' },
   { key: 'second-position', title: '二位站姿', tag: '静态基准 · 对称控制', view: 'front', description: '观察双侧对称、骨盆稳定、膝脚方向与重心分配。' },
-  { key: 'demi-plie', title: '二位 plié 蹲', tag: '核心慢速基训 · 下肢控制', view: 'front', description: '从准备到下蹲、还原，观察躯干稳定、膝脚方向与左右膝角变化。' },
-  { key: 'tendu', title: 'Tendu 擦地', tag: '核心慢速基训 · 腿部延伸', view: 'front', description: '观察支撑侧稳定、工作腿路径、膝部伸展和骨盆代偿线索。' },
-  { key: 'passe', title: 'Passé 静态吸腿', tag: '单腿承重 · 平衡控制', view: 'front', description: '观察单腿支撑阶段的肩胯关系、膝髋排列与身体摆动。' },
-  { key: 'degage', title: 'Dégagé 小踢腿', tag: '单腿承重 · 动态控制', view: 'side', description: '观察支撑腿稳定、工作腿抬起路径、膝角和躯干姿态变化。' },
+  { key: 'demi-plie', title: '蹲', tag: '核心慢速基训 · 下肢控制', view: 'front', description: '从准备到下蹲、还原，观察躯干稳定、膝脚方向与左右膝角变化。' },
+  { key: 'tendu', title: '擦地', tag: '核心慢速基训 · 腿部延伸', view: 'front', description: '观察支撑侧稳定、工作腿路径、膝部伸展和骨盆代偿线索。' },
+  { key: 'passe', title: '单腿蹲', tag: '单腿承重 · 平衡控制', view: 'front', description: '观察单腿支撑阶段的肩胯关系、膝髋排列与身体摆动。' },
+  { key: 'degage', title: '控制', tag: '单腿承重 · 动态控制', view: 'side', description: '观察支撑腿稳定、工作腿抬起路径、膝角和躯干姿态变化。' },
 ];
 
 export function ensureDance(db) {
@@ -18,6 +18,14 @@ export function ensureDance(db) {
   if (!one(db, 'SELECT 1 FROM dance_migrations WHERE version=1')) tx(db, () => {
     db.exec(readFileSync(new URL('./migrations/001.sql', import.meta.url), 'utf8'));
     run(db, 'INSERT INTO dance_migrations(version,applied_at) VALUES(1,?)', now());
+  });
+  if (!one(db, 'SELECT 1 FROM dance_migrations WHERE version=2')) tx(db, () => {
+    db.exec(readFileSync(new URL('./migrations/002.sql', import.meta.url), 'utf8'));
+    run(db, 'INSERT INTO dance_migrations(version,applied_at) VALUES(2,?)', now());
+  });
+  if (!one(db, 'SELECT 1 FROM dance_migrations WHERE version=3')) tx(db, () => {
+    db.exec(readFileSync(new URL('./migrations/003.sql', import.meta.url), 'utf8'));
+    run(db, 'INSERT INTO dance_migrations(version,applied_at) VALUES(3,?)', now());
   });
   run(db, "UPDATE dance_training SET status='WAITING_REVIEW', analysis_json=?, updated_at=? WHERE status='AI_PROCESSING'", JSON.stringify({ mode: 'interrupted', message: '服务重启中断 AI 分析；已保留指标，可重新分析或请教师复核', agents: [], selected: [] }), now());
 }
@@ -64,6 +72,11 @@ export function createDanceService(db, dataDir) {
     check(training && training.cohort === profile.cohort && (training.student_id === user.user_id || profile.role === 'teacher'), 404, 'not_found', '练习不存在或无权访问');
     return training;
   };
+  const publicStandard = (standard) => {
+    if (!standard) return null;
+    const { checkpoints, reference_metrics_json, reference_keyframes_json, ...fields } = standard;
+    return { ...fields, checkpoints: json(checkpoints, []), reference_metrics: json(reference_metrics_json), reference_frame_count: json(reference_keyframes_json, []).length };
+  };
   const removeVideo = (training) => {
     if (training.video_path) {
       const file = join(mediaDir, training.video_path);
@@ -89,7 +102,7 @@ export function createDanceService(db, dataDir) {
       training_id: training.training_id, student_id: training.student_id, student_code: one(db, 'SELECT pseudonym FROM users WHERE user_id=?', training.student_id).pseudonym,
       status: training.status, created_at: training.created_at, updated_at: training.updated_at,
       consent_cloud: !!training.consent_cloud, consent_video: !!training.consent_video,
-      standard: { ...standard, checkpoints: json(standard.checkpoints, []) }, metrics: json(training.metrics_json), analysis,
+      standard: publicStandard(standard), metrics: json(training.metrics_json), analysis,
       feedback, video_url: training.video_path && training.video_expires_at > now() && training.consent_video ? `/api/dance/sessions/${trainingId}/video` : null,
       video_expires_at: training.video_expires_at,
     };
@@ -99,7 +112,8 @@ export function createDanceService(db, dataDir) {
     catalog(user) {
       const profile = me(user);
       const standards = all(db, 'SELECT * FROM dance_standards WHERE cohort=? ORDER BY version DESC', profile.cohort);
-      return { actions: ACTIONS.map((action) => { const standard = standards.find((item) => item.action_key === action.key); return { ...action, standard: standard ? { ...standard, checkpoints: json(standard.checkpoints) } : null }; }), roles: ROLES.map(({ id: roleId, label }) => ({ id: roleId, label })), vision_configured: !!process.env.DANCE_VISION_PROVIDER_ID };
+      const savedQwen = one(db, "SELECT provider_id FROM model_configs WHERE enabled=1 AND name LIKE '千问视觉%' ORDER BY updated_at DESC LIMIT 1");
+      return { actions: ACTIONS.map((action) => { const standard = standards.find((item) => item.action_key === action.key); return { ...action, standard: publicStandard(standard) }; }), roles: ROLES.map(({ id: roleId, label }) => ({ id: roleId, label })), vision_configured: !!(process.env.DANCE_VISION_PROVIDER_ID || savedQwen?.provider_id) };
     },
     publishStandard(user, input) {
       const profile = requireRole(user, ['teacher']);
@@ -108,12 +122,29 @@ export function createDanceService(db, dataDir) {
       const title = text(input.title, 80, '动作名称'), instructions = text(input.instructions, 2000, '教学要求');
       const checkpoints = list(input.checkpoints, 6, '检查点');
       check(checkpoints.length > 0 && input.confirm === true, 400, 'confirm_required', '请填写检查点并确认发布');
+      let referenceMetrics = null;
+      const referenceKeyframes = input.reference_keyframes ?? [];
+      check(Array.isArray(referenceKeyframes) && referenceKeyframes.length <= 3, 400, 'bad_reference', '最多保存 3 张教师示范关键帧');
+      for (const frame of referenceKeyframes) {
+        check(frame && typeof frame.data === 'string' && frame.data.length <= 300000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(frame.data) && typeof frame.time === 'number' && Number.isFinite(frame.time) && frame.time >= 0 && frame.time <= 90, 400, 'bad_reference', '教师示范关键帧格式无效');
+        check(Buffer.from(frame.data.split(',')[1], 'base64').subarray(0, 3).toString('hex') === 'ffd8ff', 400, 'bad_reference', '教师示范关键帧不是 JPEG');
+      }
+      if (input.reference_pose != null) {
+        check(input.reference_pose && input.reference_pose.view === input.view, 400, 'wrong_view', '示范视频视角必须与动作标准一致');
+        check(Array.isArray(input.reference_pose.frames) && input.reference_pose.frames.length <= 450, 400, 'bad_reference', '示范视频最多提取 450 帧');
+        try { referenceMetrics = computeMetrics(input.reference_pose); } catch (error) { check(false, 400, 'bad_reference', error.message); }
+        check(referenceMetrics.reliable, 400, 'bad_reference_quality', '示范视频姿态质量不足，请调整机位或重新录制');
+      }
       return tx(db, () => {
         const version = (one(db, 'SELECT MAX(version) version FROM dance_standards WHERE cohort=? AND action_key=?', profile.cohort, input.action_key).version || 0) + 1;
         const standardId = id('std');
-        run(db, 'INSERT INTO dance_standards VALUES(?,?,?,?,?,?,?,?,?,?)', standardId, input.action_key, version, profile.cohort, user.user_id, title, input.view, instructions, JSON.stringify(checkpoints), now());
-        audit(db, { actor: user, action: 'dance_standard_published', target_type: 'dance_standard', target_id: standardId, detail: { version } });
-        return { standard_id: standardId, version };
+        const previous = one(db, 'SELECT view,reference_metrics_json,reference_keyframes_json FROM dance_standards WHERE cohort=? AND action_key=? ORDER BY version DESC LIMIT 1', profile.cohort, input.action_key);
+        const savedReference = referenceMetrics ? JSON.stringify(referenceMetrics) : previous?.view === input.view ? previous.reference_metrics_json : null;
+        const savedFrames = referenceKeyframes.length ? JSON.stringify(referenceKeyframes) : previous?.view === input.view ? previous.reference_keyframes_json : null;
+        run(db, `INSERT INTO dance_standards(standard_id,action_key,version,cohort,teacher_id,title,view,instructions,checkpoints,created_at,reference_metrics_json,reference_keyframes_json)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, standardId, input.action_key, version, profile.cohort, user.user_id, title, input.view, instructions, JSON.stringify(checkpoints), now(), savedReference, savedFrames);
+        audit(db, { actor: user, action: 'dance_standard_published', target_type: 'dance_standard', target_id: standardId, detail: { version, reference_attached: !!savedReference, reference_replaced: !!referenceMetrics } });
+        return { standard_id: standardId, version, reference_metrics: savedReference ? JSON.parse(savedReference) : null };
       });
     },
     createTraining(user, input) {
@@ -159,7 +190,7 @@ export function createDanceService(db, dataDir) {
       check(Array.isArray(keyframes) && keyframes.length <= 6, 400, 'bad_frames', '最多 6 张关键帧');
       check(!keyframes.length || training.consent_cloud, 403, 'consent_required', '未授权向云端发送关键帧');
       for (const frame of keyframes) {
-        check(frame && typeof frame.data === 'string' && frame.data.length <= 500000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(frame.data) && typeof frame.time === 'number' && Number.isFinite(frame.time) && frame.time >= 0 && frame.time <= 60, 400, 'bad_frame', '关键帧格式或大小无效');
+        check(frame && typeof frame.data === 'string' && frame.data.length <= 500000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(frame.data) && typeof frame.time === 'number' && Number.isFinite(frame.time) && frame.time >= 0 && frame.time <= 90, 400, 'bad_frame', '关键帧格式或大小无效');
         check(Buffer.from(frame.data.split(',')[1], 'base64').subarray(0,3).toString('hex') === 'ffd8ff', 400, 'bad_frame', '关键帧内容不是 JPEG');
       }
       check(pending.size < 2, 429, 'busy', '分析队列繁忙，请稍后重试');
@@ -182,9 +213,8 @@ export function createDanceService(db, dataDir) {
       const training = owned(user, trainingId);
       check(training.consent_video && training.status !== 'WITHDRAWN', 403, 'consent_required', '未授权保存原视频');
       check(['video/mp4','video/webm','video/quicktime'].includes(input.type), 400, 'bad_video', '仅支持 MP4、WebM 或 MOV');
-      check(typeof input.data === 'string' && input.data.length <= 28000000 && /^[A-Za-z0-9+/]+={0,2}$/.test(input.data), 400, 'bad_video', '视频过大或格式无效');
-      const bytes = Buffer.from(input.data, 'base64');
-      check(bytes.length >= 16 && bytes.length <= 20 * 1024 * 1024, 400, 'bad_video', '视频上限为 20MB');
+      const bytes = input.bytes;
+      check(Buffer.isBuffer(bytes) && bytes.length >= 16 && bytes.length <= 100 * 1024 * 1024, 400, 'bad_video', '视频上限为 100MB');
       const isWebm = bytes.subarray(0,4).toString('hex') === '1a45dfa3';
       const isMp4 = bytes.subarray(4,8).toString() === 'ftyp';
       check(input.type === 'video/webm' ? isWebm : isMp4, 400, 'bad_video', '文件内容与视频格式不匹配');

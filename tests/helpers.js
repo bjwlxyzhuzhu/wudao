@@ -24,7 +24,8 @@ export function client(base) {
     jar,
     async req(method, path, body, headers = {}) {
       const cookie = Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ');
-      const res = await fetch(base + path, { method, headers: { 'content-type': 'application/json', 'x-yz-csrf': '1', cookie, ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
+      const binary = Buffer.isBuffer(body) || body instanceof Uint8Array;
+      const res = await fetch(base + path, { method, headers: { 'content-type': binary ? 'application/octet-stream' : 'application/json', 'x-yz-csrf': '1', cookie, ...headers }, body: body === undefined ? undefined : binary ? body : JSON.stringify(body) });
       const sc = res.headers.getSetCookie?.() || [];
       for (const s of sc) { const [kv] = s.split(';'); const i = kv.indexOf('='); jar[kv.slice(0, i)] = kv.slice(i + 1); }
       const type = res.headers.get('content-type') || '';

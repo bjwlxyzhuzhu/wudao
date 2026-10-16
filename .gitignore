@@ -10,3 +10,9 @@ node_modules/
 .local/
 public/vendor/mediapipe/
 试用账号.txt
+output/
+outputs/
+tmp/
+*.mp4
+*.webm
+*.zip

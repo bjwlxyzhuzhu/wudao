@@ -55,6 +55,29 @@ const analyze = async (training) => {
 test('首期动作库与项目方案保持六项一致', () => {
   assert.deepEqual(ACTIONS.map((action) => action.key), ['first-position', 'second-position', 'demi-plie', 'tendu', 'passe', 'degage']);
   assert.equal(new Set(ACTIONS.map((action) => action.title)).size, 6);
+  assert.deepEqual(ACTIONS.slice(2).map((action) => action.title), ['蹲', '擦地', '单腿蹲', '控制']);
+});
+
+test('教师示范视频只保存可靠参考指标，新版本沿用同视角数据', async () => {
+  const teacherFrame={time:1,data:'data:image/jpeg;base64,/9j/AA=='};
+  const first = await teacher.post('/api/dance/standards', { action_key: 'tendu', title: 'Tendu 参考标准', view: 'front', instructions: '仅用于测试', checkpoints: ['检查腿部控制'], confirm: true, reference_pose: pose(), reference_keyframes:[teacherFrame] });
+  assert.equal(first.status, 200);
+  assert.equal(first.data.reference_metrics.reliable, true);
+  const catalog = await student.get('/api/dance/catalog');
+  const standard = catalog.data.actions.find((item) => item.key === 'tendu').standard;
+  assert.equal(standard.reference_metrics.metrics.knee_left.value, 180);
+  assert.equal(standard.reference_frame_count,1);
+  assert.equal(standard.reference_metrics_json, undefined);
+  assert.equal(standard.reference_keyframes_json, undefined);
+  assert.deepEqual(JSON.parse(app.db.prepare('SELECT reference_keyframes_json FROM dance_standards WHERE standard_id=?').get(first.data.standard_id).reference_keyframes_json),[teacherFrame]);
+  const next = await teacher.post('/api/dance/standards', { action_key: 'tendu', title: 'Tendu 新版标准', view: 'front', instructions: '更新要求', checkpoints: ['检查腿部控制'], confirm: true });
+  assert.equal(next.data.version, 2);
+  assert.equal(next.data.reference_metrics.metrics.knee_left.value, 180);
+  assert.deepEqual(JSON.parse(app.db.prepare('SELECT reference_keyframes_json FROM dance_standards WHERE standard_id=?').get(next.data.standard_id).reference_keyframes_json),[teacherFrame]);
+  assert.equal((await teacher.post('/api/dance/standards', { action_key: 'passe', title: '视角不匹配', view: 'side', instructions: '测试', checkpoints: ['测试'], confirm: true, reference_pose: pose() })).status, 400);
+  const poor = pose(); poor.frames.forEach((frame) => { frame.people = 0; frame.landmarks = []; });
+  assert.equal((await teacher.post('/api/dance/standards', { action_key: 'first-position', title: '质量不足', view: 'front', instructions: '测试', checkpoints: ['测试'], confirm: true, reference_pose: poor })).status, 400);
+  assert.equal((await student.post('/api/dance/standards', { action_key: 'first-position', title: '越权', view: 'front', instructions: '测试', checkpoints: ['测试'], confirm: true })).status, 403);
 });
 
 test('舞蹈指标：已知角度、宽高比、缺失值、零分母与多人质量门槛', () => {
@@ -71,7 +94,31 @@ test('舞蹈指标：已知角度、宽高比、缺失值、零分母与多人�
   const occluded=pose();occluded.frames.forEach((frame)=>{frame.landmarks[25].visibility=.1;});
   assert.equal(computeMetrics(occluded).metrics.knee_left.value,null);
   const multiple=pose();multiple.frames[0].people=2;
-  assert.equal(computeMetrics(multiple).reliable,false);
+  assert.equal(computeMetrics(multiple).reliable,true);
+  const occasionalFalseDetection=pose({frames:Array.from({length:203},(_,index)=>({time:index/10,people:index<3?2:1,landmarks:structuredClone(pose().frames[0].landmarks)}))});
+  const tolerant=computeMetrics(occasionalFalseDetection);
+  assert.equal(tolerant.reliable,true);
+  assert.equal(tolerant.valid_frames,200);
+  assert.equal(tolerant.excluded_candidate_frames,3);
+  assert.doesNotMatch(tolerant.flags.join(' '),/多人|镜像/);
+  const persistentMultiple=pose();persistentMultiple.frames.slice(0,6).forEach((frame)=>{frame.people=2;});
+  const persistent=computeMetrics(persistentMultiple);
+  assert.equal(persistent.reliable,false);
+  assert.match(persistent.flags.join(' '),/多个候选/);
+  const coverageAt76=pose();coverageAt76.frames.slice(0,7).forEach((frame)=>{frame.people=0;frame.landmarks=[];});
+  const acceptedCoverage=computeMetrics(coverageAt76);
+  assert.equal(acceptedCoverage.reliable,true);
+  assert.equal(acceptedCoverage.coverage,23/30);
+  const coverageBelow70=pose();coverageBelow70.frames.slice(0,10).forEach((frame)=>{frame.people=0;frame.landmarks=[];});
+  const rejectedCoverage=computeMetrics(coverageBelow70);
+  assert.equal(rejectedCoverage.reliable,false);
+  assert.match(rejectedCoverage.flags.join(' '),/不足 70%/);
+  const withinTolerance=pose();withinTolerance.frames.slice(0,3).forEach((frame)=>{frame.people=2;});
+  assert.equal(computeMetrics(withinTolerance).reliable,true);
+  const beyondTolerance=pose();beyondTolerance.frames.slice(0,4).forEach((frame)=>{frame.people=2;});
+  assert.equal(computeMetrics(beyondTolerance).reliable,false);
+  const longClip=pose();longClip.frames.at(-1).time=89.9;
+  assert.equal(validatePose(longClip).frames.at(-1).time,89.9);
   const side=computeMetrics(pose({view:'side'}));assert.equal(side.metrics.shoulder_line.value,null);
 });
 
@@ -126,6 +173,11 @@ test('质量不足不能分析；姿态视角必须匹配标准',async()=>{
   const result=await student.post(`/api/dance/sessions/${training.training_id}/pose`,missing);
   assert.equal(result.data.status,'NEEDS_RECAPTURE');
   assert.equal((await student.post(`/api/dance/sessions/${training.training_id}/analyze`,{})).status,409);
+  const recovered=pose();recovered.frames.slice(0,3).forEach((frame)=>{frame.people=2;});
+  const recalculated=await student.post(`/api/dance/sessions/${training.training_id}/pose`,recovered);
+  assert.equal(recalculated.data.status,'METRICS_READY');
+  assert.equal(recalculated.data.metrics.version,'pose-metrics-4');
+  assert.equal(recalculated.data.metrics.excluded_candidate_frames,3);
 });
 
 test('媒体与关键帧：分别授权、校验格式、支持范围读取、撤回后拒绝访问',async()=>{
@@ -134,8 +186,9 @@ test('媒体与关键帧：分别授权、校验格式、支持范围读取、�
   await student.post(`/api/dance/sessions/${noVideo.training_id}/pose`,pose());
   assert.equal((await student.post(`/api/dance/sessions/${noVideo.training_id}/analyze`,{keyframes:[{time:0,data:'data:image/jpeg;base64,/9j/AA=='}]})).status,403);
   const training=await createTraining(student,{consent_video:true});
-  const bytes=Buffer.from('00000018667479706d703432000000006d70343269736f6d','hex');
-  const upload=await student.post(`/api/dance/sessions/${training.training_id}/video`,{type:'video/mp4',data:bytes.toString('base64')});
+  const bytes=Buffer.alloc(21*1024*1024);
+  Buffer.from('00000018667479706d703432000000006d70343269736f6d','hex').copy(bytes);
+  const upload=await student.req('POST',`/api/dance/sessions/${training.training_id}/video`,bytes,{'content-type':'video/mp4'});
   assert.equal(upload.status,200);
   const media=await teacher.req('GET',upload.data.video_url,undefined,{range:'bytes=4-7'});
   assert.equal(media.status,206);assert.equal(media.data.toString(),'ftyp');
@@ -179,10 +232,25 @@ test('多模态契约：图片内容块、五次实际调用、证据校验与�
   try{
     delete process.env.DANCE_VISION_PROVIDER_ID;
     await configureModel(admin,`http://127.0.0.1:${provider.address().port}/v1`,{name:'千问视觉（舞镜智练）'});
+    const referenceMetrics=computeMetrics(pose());
+    const teacherFrame={time:1,data:'data:image/jpeg;base64,/9j/AA=='};
+    app.db.prepare('UPDATE dance_standards SET reference_metrics_json=?,reference_keyframes_json=? WHERE standard_id=?').run(JSON.stringify(referenceMetrics),JSON.stringify([teacherFrame]),standard);
     const standardRow=app.db.prepare('SELECT * FROM dance_standards WHERE standard_id=?').get(standard);
     const result=await analyzeTraining(app.db,{standard:standardRow,metrics:computeMetrics(pose()),keyframes:[{time:0,data:'data:image/jpeg;base64,/9j/AA=='}],consentCloud:true});
     assert.equal(result.mode,'multimodal');assert.equal(requests.length,5);
     assert.equal(requests[0].messages[1].content[2].type,'image_url');
+    assert.equal(requests[0].messages[1].content[4].type,'image_url');
+    const context=JSON.parse(requests[0].messages[1].content[0].text);
+    assert.deepEqual(context.teacher_reference_metrics,referenceMetrics);
+    assert.equal(context.teacher_demonstration_frames,1);
+    assert.ok(context.available_evidence.includes('reference:knee_left'));
+    assert.ok(context.available_evidence.includes('standard_frame:1'));
+    assert.equal(requests[0].messages[1].content[1].text,'standard_frame:1 教师示范关键帧，时间 1 秒');
+    assert.equal((await student.get('/api/dance/catalog')).data.vision_configured,true);
+    const noConsent=await analyzeTraining(app.db,{standard:standardRow,metrics:computeMetrics(pose()),keyframes:[{time:0,data:'data:image/jpeg;base64,/9j/AA=='}],consentCloud:false});
+    assert.equal(noConsent.mode,'metrics_only');
+    assert.match(noConsent.message,/未授权/);
+    assert.equal(requests.length,5);
     assert.equal(result.selected[0].id,'a_basic:1');
     assert.equal(result.compliance.status,'needs_correction');
     assert.throws(()=>validateFindings({findings:[{text:'不存在的证据',evidence:['metric:imaginary'],uncertain:false}]},new Set(['metric:trunk_tilt'])),/evidence/);

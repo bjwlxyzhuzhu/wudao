@@ -1,6 +1,6 @@
 services:
   wudao:
-    image: ${WUDA_IMAGE:-wudao:local}
+    image: ${WUDA_IMAGE:-ghcr.io/bjwlxyzhuzhu/wudao:latest}
     build: .
     restart: unless-stopped
     ports:

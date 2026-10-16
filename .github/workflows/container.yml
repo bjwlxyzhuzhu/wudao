@@ -74,6 +74,28 @@ jobs:
             type=ref,event=tag
             type=sha
 
+      - name: Build smoke-test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: wudao:smoke
+          cache-to: type=gha,mode=max
+          cache-from: type=gha
+
+      - name: Verify dance container and pose assets
+        run: |
+          docker run -d --name wudao-smoke -p 8787:8787 wudao:smoke
+          trap 'docker logs wudao-smoke; docker rm -f wudao-smoke' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8787/api/health; then break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:8787/wujing | grep -q '舞镜智练'
+          curl -fsS http://localhost:8787/ | grep -q '舞镜智练'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8787/index.html)" = 302
+          docker exec wudao-smoke node scripts/setup-pose-assets.mjs --verify-only
+
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
@@ -82,3 +104,4 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

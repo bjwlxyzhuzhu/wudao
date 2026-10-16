@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb, one } from '../server/db.js';
-import { verifyPassword } from '../server/auth.js';
+import { createUser, verifyPassword } from '../server/auth.js';
 import { loadMasterKey, resolveProvider } from '../server/models.js';
 import { ensureDance } from '../server/dance/service.js';
 import { bootstrapDanceAccounts, bootstrapQwen, DEMO_ACCOUNTS } from '../server/dance/bootstrap.js';
@@ -16,6 +16,16 @@ function database() {
   ensureDance(db);
   return { db, close() { db.close(); rmSync(dir, { recursive: true, force: true }); } };
 }
+
+test('本机演示固定密码仅允许由初始化专用选项创建', () => {
+  const fixture = database();
+  try {
+    assert.throws(() => createUser(fixture.db, { login: 'weak_regular', password: '12345678' }), /同时包含字母和数字/);
+    const user = createUser(fixture.db, { login: 'weak_local', password: '12345678', is_teacher: false, allowLocalDemoPassword: true });
+    assert.equal(verifyPassword('12345678', user.password_hash), true);
+    assert.throws(() => createUser(fixture.db, { login: 'wrong_local', password: '87654321', is_teacher: false, allowLocalDemoPassword: true }), /同时包含字母和数字/);
+  } finally { fixture.close(); }
+});
 
 test('部署演示模式创建固定角色账号，重复运行不会覆盖密码', () => {
   const fixture = database();

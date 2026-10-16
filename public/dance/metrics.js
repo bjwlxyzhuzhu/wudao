@@ -1,4 +1,6 @@
-export const METRIC_VERSION = 'pose-metrics-1';
+export const METRIC_VERSION = 'pose-metrics-4';
+export const MAX_CANDIDATE_FRAME_RATIO = 0.1;
+export const MIN_COVERAGE_RATIO = 0.7;
 export const METRIC_LABELS = {
   knee_left: '左膝夹角', knee_right: '右膝夹角', trunk_tilt: '躯干倾斜',
   shoulder_line: '肩线倾斜', pelvic_line: '骨盆侧倾代理', sway: '髋中点摆动',
@@ -24,7 +26,7 @@ export function validatePose(payload) {
   if (!Array.isArray(payload.frames) || payload.frames.length < 3 || payload.frames.length > 900) throw new Error('需提供 3–900 帧姿态数据');
   let previous = -1;
   for (const frame of payload.frames) {
-    if (!finite(frame.time) || frame.time < 0 || frame.time <= previous || frame.time > 60) throw new Error('帧时间须递增且在 60 秒内');
+    if (!finite(frame.time) || frame.time < 0 || frame.time <= previous || frame.time > 90) throw new Error('帧时间须递增且在 90 秒内');
     previous = frame.time;
     if (!Number.isInteger(frame.people) || frame.people < 0 || frame.people > 2) throw new Error('人体数量无效');
     if (!Array.isArray(frame.landmarks) || ![0,33].includes(frame.landmarks.length)) throw new Error('每帧需有 33 个关键点或明确标记未检测到');
@@ -62,16 +64,17 @@ export function computeMetrics(raw) {
     }
   }
   const coverage = validFrames / payload.frames.length;
+  const multipleRatio = multipleFrames / payload.frames.length;
   const flags = [];
-  if (coverage < 0.8) flags.push('有效帧不足 80%，请调整机位或重拍');
-  if (multipleFrames) flags.push('检测到多人或镜像，已排除相应帧');
+  if (coverage < MIN_COVERAGE_RATIO) flags.push('有效帧不足 70%，请调整机位或重拍');
+  if (multipleRatio > MAX_CANDIDATE_FRAME_RATIO) flags.push('人体检测持续发现多个候选，请确认画面中只有一人并重新拍摄');
   if (payload.frames.at(-1).time - payload.frames[0].time < 2) flags.push('有效视频不足 2 秒');
   if (hips.length >= 3) {
     const center = average(hips.map((hip) => hip.x));
     const deviation = Math.sqrt(average(hips.map((hip) => (hip.x - center) ** 2))) / average(hips.map((hip) => hip.torso));
     values.sway.push({ value: deviation, time: hips[0].time });
   }
-  const reliable = coverage >= 0.8 && validFrames >= 10 && multipleFrames === 0 && flags.length === 0;
+  const reliable = coverage >= MIN_COVERAGE_RATIO && validFrames >= 10 && multipleRatio <= MAX_CANDIDATE_FRAME_RATIO && payload.frames.at(-1).time - payload.frames[0].time >= 2;
   const metrics = Object.fromEntries(Object.entries(values).map(([name, samples]) => {
     const readings = samples.map((sample) => sample.value);
     const available = readings.length > 0;
@@ -85,5 +88,5 @@ export function computeMetrics(raw) {
       evidence: available ? { start: samples[0].time, end: name === 'sway' ? hips.at(-1).time : samples.at(-1).time } : null,
     }];
   }));
-  return { version: METRIC_VERSION, view: payload.view, coverage, valid_frames: validFrames, total_frames: payload.frames.length, flags, reliable, metrics };
+  return { version: METRIC_VERSION, view: payload.view, coverage, valid_frames: validFrames, total_frames: payload.frames.length, excluded_candidate_frames: multipleFrames, flags, reliable, metrics };
 }
