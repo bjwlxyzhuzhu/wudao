@@ -43,6 +43,16 @@ body.dance-admin input:focus, body.dance-admin select:focus, body.dance-admin te
 body.dance-admin .panel, body.dance-admin .modal { background: var(--surface); border-color: var(--line); box-shadow: none; }
 body.dance-admin .panel h2, body.dance-admin .modal h3 { color: var(--text); }
 body.dance-admin table.data th { color: #c5ef8e; background: #ffffff05; }
+/* Admin stays dark even when the dance app has a saved light-theme preference. */
+:root[data-theme="light"] body.dance-admin .panel,
+:root[data-theme="light"] body.dance-admin .modal { background: var(--surface); border-color: var(--line); box-shadow: none; }
+:root[data-theme="light"] body.dance-admin .panel h2,
+:root[data-theme="light"] body.dance-admin .modal h3 { color: var(--text); }
+:root[data-theme="light"] body.dance-admin table.data th { color: #c5ef8e; background: #ffffff05; }
+body.dance-admin table.data td { color: var(--text); }
+body.dance-admin .muted { color: var(--muted); }
+body.dance-admin .faint,
+body.dance-admin .empty { color: #a5afa3; }
 body.dance-admin .notice { border-color: #9bc66a; background: #c5ef8e12; color: var(--muted); }
 body.dance-admin .badge { border-radius: 6px; }
 
