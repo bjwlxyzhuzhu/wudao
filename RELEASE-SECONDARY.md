@@ -1,6 +1,6 @@
 # 舞智正姿 源码和部署说明
 
-本版面向中等学校的舞蹈技能学习与体态训练辅助，以保留的周五录屏系统源码为基础。包含舞镜智练和舞安智护。视频角度分析不构成脊柱侧弯诊断或治疗建议。
+本版面向高校本科生的芭蕾基本功自主学习与姿态训练辅助，以保留的周五录屏系统源码为基础。包含舞镜智练和舞安智护。视频角度分析不构成脊柱侧弯诊断或治疗建议。
 
 ## Windows 本机运行
 
@@ -28,7 +28,7 @@ start-demo.cmd
 
 ## 镜像和网站部署
 
-GitHub Actions 在 main 提交和 v 开头的版本标签上运行完整测试、构建镜像、启动冒烟测试，再发布到 GHCR。固定版本推荐使用 `ghcr.io/bjwlxyzhuzhu/wudao:secondary-20261019`（以 Actions 成功发布为准）。容器监听 8787，持久化挂载 `/app/data`。
+GitHub Actions 在 main 提交和 v 开头的版本标签上运行完整测试、构建镜像、启动冒烟测试，再发布到 GHCR。固定版本推荐使用 `ghcr.io/bjwlxyzhuzhu/wudao:ballet-undergraduate-20261019`（以 Actions 成功发布为准）。容器监听 8787，持久化挂载 `/app/data`。
 
 ```sh
 docker compose pull

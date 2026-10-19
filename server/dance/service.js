@@ -63,7 +63,7 @@ export function createDanceService(db, dataDir) {
   const pending = new Map();
   const me = (user) => {
     const profile = one(db, 'SELECT * FROM dance_profiles WHERE user_id=?', user.user_id);
-    check(profile, 403, 'no_dance_access', '该账号尚未开通舞蹈平台权限');
+    check(profile, 403, 'no_dance_access', user.is_admin ? '管理员请从 /admin 进入管理后台；教师和学生从 /wujing 登录。' : '该账号尚未开通舞蹈身份。请联系管理员在 /admin 的账号管理中设置身份和班级，然后返回 /wujing 登录。');
     return { user_id: user.user_id, name: user.display_name, pseudonym: user.pseudonym, must_change_password: !!user.must_change_password, ...profile };
   };
   const requireRole = (user, roles) => { const profile = me(user); check(roles.includes(profile.role), 403, 'forbidden', '当前身份不能执行此操作'); return profile; };

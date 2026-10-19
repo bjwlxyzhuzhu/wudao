@@ -52,6 +52,13 @@ test('舞蹈账号：创建、首次改密、班级隔离、重置、停用和�
     assert.equal((await admin.post(`/api/admin/dance-users/${root.user_id}/profile`, { role: 'student', cohort: 'dance-a' })).status, 400);
     const legacy = list.find(u => u.login === 'teacher_a');
     assert.equal(legacy.role, 'unassigned');
+    const repaired = client(app.base);
+    const denied = await repaired.post('/api/dance/auth/login', { login: 'teacher_a', password: 'Teach12345' });
+    assert.equal(denied.status, 403);
+    assert.equal(denied.data.error.code, 'no_dance_access');
     assert.equal((await admin.post(`/api/admin/dance-users/${legacy.user_id}/profile`, { role: 'teacher', cohort: 'dance-a' })).status, 200);
+    assert.equal((await repaired.post('/api/dance/auth/login', { login: 'teacher_a', password: 'Teach12345' })).status, 200);
+    assert.equal((await repaired.get('/api/dance/me')).data.role, 'teacher');
+    assert.equal((await repaired.post('/api/dance/standards', { action_key: 'tendu', title: '旧教师修复后的标准', view: 'front', instructions: '芭蕾擦地教学要求', checkpoints: ['保持躯干稳定'], confirm: true })).status, 200);
   } finally { await app.stop(); }
 });

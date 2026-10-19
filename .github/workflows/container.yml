@@ -70,7 +70,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=secondary-20261019,enable={{is_default_branch}}
+            type=raw,value=ballet-undergraduate-20261019,enable={{is_default_branch}}
             type=ref,event=branch
             type=ref,event=tag
             type=sha
@@ -92,8 +92,8 @@ jobs:
             if curl -fsS http://localhost:8787/api/health; then break; fi
             sleep 2
           done
-          curl -fsS http://localhost:8787/wujing | grep -q '舞镜智练'
-          curl -fsS http://localhost:8787/ | grep -q '舞镜智练'
+          curl -fsS http://localhost:8787/wujing | grep -q '舞智正姿'
+          curl -fsS http://localhost:8787/ | grep -q '舞智正姿'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8787/index.html)" = 302
           docker exec wudao-smoke node scripts/setup-pose-assets.mjs --verify-only
 

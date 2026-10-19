@@ -97,7 +97,7 @@ const today = () => new Date().toLocaleDateString('zh-CN', { month: 'long', day:
 function shell(content) {
   const navigation = isRisk ? [['health','今日状态'],['loads','训练负荷']] : state.user?.role === 'teacher' ? [['home','工作台'],['standards','动作标准'],['review','训练复核'],['history','训练记录']] : [['home','今天练什么'],['practice','开始练习'],['history','成长记录']];
   document.body.classList.toggle('risk-page', isRisk);
-  document.title = isRisk ? '舞安智护 · 科学训练，从了解自己开始' : '舞镜智练 · 让每一次练习看得见';
+  document.title = isRisk ? '舞智正姿 · 舞安智护' : '舞智正姿 · 高校芭蕾基本功自主学习';
   content = content.replaceAll('3–30 秒', '3 秒至 1 分 30 秒').replaceAll('3—30 秒', '3 秒至 1 分 30 秒').replace('20 MB 以内', '100 MB 以内').replace('不超过 20 MB', '不超过 100 MB')
     .replace('本机提取姿态角度，只保存统计数据，不上传或留存原视频。', '本机提取角度；保存统计和最多 3 张遮脸示范帧用于授权 AI 对照，不保存原视频。')
     .replace('向云端模型发送最多 6 张遮挡面部的关键帧。', '勾选后向千问发送最多 6 张遮脸学生关键帧，与老师示范关键帧和角度统计对照。')
@@ -111,7 +111,7 @@ function shell(content) {
   } else {
     content = content.replaceAll('检测到多人或镜像，已排除相应帧', '这是旧版检测结果。模型只统计人体候选，没有识别镜子；请重新选择视频按新版规则检测。');
   }
-  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="${isRisk ? '/wuan' : '/wujing'}"><img src="/dance/mark.svg" alt=""><div><b>${isRisk ? '舞安智护' : '舞镜智练'}</b><small>${isRisk ? '训练健康' : '舞蹈技能训练'}</small></div></a>${state.user ? `<nav class="nav" aria-label="主导航">${navigation.map(([target,label]) => `<button data-tab="${target}" class="${state.tab === target ? 'active' : ''}" ${state.tab === target ? 'aria-current="page"' : ''} ${state.busy ? 'disabled' : ''}>${label}</button>`).join('')}</nav>` : ''}<div class="sidebar-bottom"><a class="product-link" href="${isRisk ? '/wujing' : '/wuan'}">切换到${isRisk ? '舞镜智练' : '舞安智护'}<small>${isRisk ? '技能训练' : '训练健康打卡'}</small></a>${state.user ? `<div class="profile"><div class="avatar" aria-hidden="true">${escape(state.user.name?.slice(0,1) || '舞')}</div><div><b>${escape(state.user.name)}</b><small>${roleName(state.user.role)}</small></div></div><button class="link-button" data-command="logout">退出账号</button>` : ''}</div></aside><main class="main" id="main"><header class="topbar"><span class="date">${today()}</span></header>${content}<footer class="footer-note">${isRisk ? '训练状态记录与健康教育，不能替代医生诊断。' : '姿态指标是教学参考，正式反馈由老师确认。'}</footer></main></div>`;
+  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="${isRisk ? '/wuan' : '/wujing'}"><img src="/dance/mark.svg" alt=""><div><b>舞智正姿</b><small>${isRisk ? '训练健康' : '高校芭蕾基本功学习'}</small></div></a>${state.user ? `<nav class="nav" aria-label="主导航">${navigation.map(([target,label]) => `<button data-tab="${target}" class="${state.tab === target ? 'active' : ''}" ${state.tab === target ? 'aria-current="page"' : ''} ${state.busy ? 'disabled' : ''}>${label}</button>`).join('')}</nav>` : ''}<div class="sidebar-bottom"><a class="product-link" href="${isRisk ? '/wujing' : '/wuan'}">切换到${isRisk ? '舞镜智练' : '舞安智护'}<small>${isRisk ? '技能训练' : '训练健康打卡'}</small></a>${state.user ? `<div class="profile"><div class="avatar" aria-hidden="true">${escape(state.user.name?.slice(0,1) || '舞')}</div><div><b>${escape(state.user.name)}</b><small>${roleName(state.user.role)}</small></div></div><button class="link-button" data-command="logout">退出账号</button>` : ''}</div></aside><main class="main" id="main"><header class="topbar"><span class="date">${today()}</span></header>${content}<footer class="footer-note">${isRisk ? '训练状态记录与健康教育，不能替代医生诊断。' : '姿态指标是教学参考，正式反馈由老师确认。'}</footer></main></div>`;
   if (state.user) {
     const account = document.createElement('button');
     account.className = 'mobile-account link-button';
@@ -163,7 +163,7 @@ function home() {
 }
 
 function login() {
-  shell(`<section class="login"><div class="login-figure">${dancer(isRisk ? 0 : 2)}</div><div class="login-panel"><h1>${isRisk ? '登录舞安智护' : '登录舞镜智练'}</h1><p>学生、舞蹈教师和风险复核教师使用各自的账号。账号由老师或管理员提供；本机试用账号写在安装目录的「试用账号.txt」里。</p><form id="login-form"><label class="field">登录名<input name="login" autocomplete="username" required placeholder="例如 dance_student"></label><label class="field">密码<input name="password" type="password" autocomplete="current-password" required></label><p class="login-error" id="login-error" role="alert"></p><button class="primary wide" type="submit">登录</button></form></div></section>`);
+  shell(`<section class="login"><div class="login-figure">${dancer(isRisk ? 0 : 2)}</div><div class="login-panel"><h1>${isRisk ? '登录舞安智护' : '登录舞智正姿'}</h1><p>学生、舞蹈教师和风险复核教师使用各自的账号。教师与学生均在本页登录，账号由管理员提供。首次登录请修改临时密码。管理员请进入下方管理后台。</p><p><a href="/admin">管理员后台</a> · 舞镜智练：高校芭蕾基本功自主学习</p><form id="login-form"><label class="field">登录名<input name="login" autocomplete="username" required placeholder="例如 dance_student"></label><label class="field">密码<input name="password" type="password" autocomplete="current-password" required></label><p class="login-error" id="login-error" role="alert"></p><button class="primary wide" type="submit">登录</button></form></div></section>`);
 }
 
 function standards() {
