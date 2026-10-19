@@ -30,7 +30,7 @@ before(async () => {
   peer = await create('dance_test_peer','student');
   outsider = await create('dance_test_outside','teacher','other-class');
   medic = await create('dance_test_medic','medic');
-  const result = await teacher.post('/api/dance/standards', { action_key: 'demi-plie', title: '测试动作标准', view: 'front', instructions: '仅测试用，不作为真实教学标准', checkpoints: ['按要求完成短片段'], confirm: true });
+  const result = await teacher.post('/api/dance/standards', { action_key: 'ballet-demi-plie', title: '测试动作标准', view: 'front', instructions: '仅测试用，不作为真实教学标准', checkpoints: ['按要求完成短片段'], confirm: true });
   assert.equal(result.status, 200);
   standard = result.data.standard_id;
 });
@@ -52,32 +52,33 @@ const analyze = async (training) => {
   throw new Error('Analysis did not finish');
 };
 
-test('首期动作库与项目方案保持六项一致', () => {
-  assert.deepEqual(ACTIONS.map((action) => action.key), ['first-position', 'second-position', 'demi-plie', 'tendu', 'passe', 'degage']);
-  assert.equal(new Set(ACTIONS.map((action) => action.title)).size, 6);
-  assert.deepEqual(ACTIONS.slice(2).map((action) => action.title), ['蹲', '擦地', '单腿蹲', '控制']);
+test('古典芭蕾动作库为四项，采用独立标识，不复用历史标准', () => {
+  assert.deepEqual(ACTIONS.map(action => action.key), ['ballet-demi-plie', 'ballet-grand-plie', 'ballet-tendu', 'ballet-adagio']);
+  assert.deepEqual(ACTIONS.map(action => action.title), ['Demi plié 半蹲', 'Grand plié 大蹲', 'Battement tendu 擦地', 'Adagio 控制组合']);
+  assert.match(ACTIONS[1].instructions, /第二位/);
+  assert.match(ACTIONS[3].instructions, /组合而非固定单动作/);
 });
 
 test('教师示范视频只保存可靠参考指标，新版本沿用同视角数据', async () => {
   const teacherFrame={time:1,data:'data:image/jpeg;base64,/9j/AA=='};
-  const first = await teacher.post('/api/dance/standards', { action_key: 'tendu', title: 'Tendu 参考标准', view: 'front', instructions: '仅用于测试', checkpoints: ['检查腿部控制'], confirm: true, reference_pose: pose(), reference_keyframes:[teacherFrame] });
+  const first = await teacher.post('/api/dance/standards', { action_key: 'ballet-tendu', title: 'Tendu 参考标准', view: 'front', instructions: '仅用于测试', checkpoints: ['检查腿部控制'], confirm: true, reference_pose: pose(), reference_keyframes:[teacherFrame] });
   assert.equal(first.status, 200);
   assert.equal(first.data.reference_metrics.reliable, true);
   const catalog = await student.get('/api/dance/catalog');
-  const standard = catalog.data.actions.find((item) => item.key === 'tendu').standard;
+  const standard = catalog.data.actions.find((item) => item.key === 'ballet-tendu').standard;
   assert.equal(standard.reference_metrics.metrics.knee_left.value, 180);
   assert.equal(standard.reference_frame_count,1);
   assert.equal(standard.reference_metrics_json, undefined);
   assert.equal(standard.reference_keyframes_json, undefined);
   assert.deepEqual(JSON.parse(app.db.prepare('SELECT reference_keyframes_json FROM dance_standards WHERE standard_id=?').get(first.data.standard_id).reference_keyframes_json),[teacherFrame]);
-  const next = await teacher.post('/api/dance/standards', { action_key: 'tendu', title: 'Tendu 新版标准', view: 'front', instructions: '更新要求', checkpoints: ['检查腿部控制'], confirm: true });
+  const next = await teacher.post('/api/dance/standards', { action_key: 'ballet-tendu', title: 'Tendu 新版标准', view: 'front', instructions: '更新要求', checkpoints: ['检查腿部控制'], confirm: true });
   assert.equal(next.data.version, 2);
   assert.equal(next.data.reference_metrics.metrics.knee_left.value, 180);
   assert.deepEqual(JSON.parse(app.db.prepare('SELECT reference_keyframes_json FROM dance_standards WHERE standard_id=?').get(next.data.standard_id).reference_keyframes_json),[teacherFrame]);
-  assert.equal((await teacher.post('/api/dance/standards', { action_key: 'passe', title: '视角不匹配', view: 'side', instructions: '测试', checkpoints: ['测试'], confirm: true, reference_pose: pose() })).status, 400);
+  assert.equal((await teacher.post('/api/dance/standards', { action_key: 'ballet-grand-plie', title: '视角不匹配', view: 'side', instructions: '测试', checkpoints: ['测试'], confirm: true, reference_pose: pose() })).status, 400);
   const poor = pose(); poor.frames.forEach((frame) => { frame.people = 0; frame.landmarks = []; });
-  assert.equal((await teacher.post('/api/dance/standards', { action_key: 'first-position', title: '质量不足', view: 'front', instructions: '测试', checkpoints: ['测试'], confirm: true, reference_pose: poor })).status, 400);
-  assert.equal((await student.post('/api/dance/standards', { action_key: 'first-position', title: '越权', view: 'front', instructions: '测试', checkpoints: ['测试'], confirm: true })).status, 403);
+  assert.equal((await teacher.post('/api/dance/standards', { action_key: 'ballet-adagio', title: '质量不足', view: 'front', instructions: '测试', checkpoints: ['测试'], confirm: true, reference_pose: poor })).status, 400);
+  assert.equal((await student.post('/api/dance/standards', { action_key: 'ballet-adagio', title: '越权', view: 'front', instructions: '测试', checkpoints: ['测试'], confirm: true })).status, 403);
 });
 
 test('舞蹈指标：已知角度、宽高比、缺失值、零分母与多人质量门槛', () => {
@@ -147,7 +148,7 @@ test('练习创建幂等，标准更新不改历史快照',async()=>{
   const repeat=await createTraining(student,{idempotency_key:requestKey});
   assert.equal(first.training_id,repeat.training_id);
   assert.equal((await student.post('/api/dance/sessions',{standard_id:standard,idempotency_key:requestKey,consent_teaching:true,consent_cloud:true})).status,409);
-  const next=await teacher.post('/api/dance/standards',{action_key:'demi-plie',title:'新标准',view:'front',instructions:'第二版测试',checkpoints:['新检查点'],confirm:true});
+  const next=await teacher.post('/api/dance/standards',{action_key:'ballet-demi-plie',title:'新标准',view:'front',instructions:'第二版测试',checkpoints:['新检查点'],confirm:true});
   assert.equal(next.data.version,2);
   assert.equal((await student.get(`/api/dance/sessions/${first.training_id}`)).data.standard.version,1);
 });
@@ -241,6 +242,10 @@ test('多模态契约：图片内容块、五次实际调用、证据校验与�
     assert.equal(requests[0].messages[1].content[2].type,'image_url');
     assert.equal(requests[0].messages[1].content[4].type,'image_url');
     const context=JSON.parse(requests[0].messages[1].content[0].text);
+    assert.equal(context.curriculum_context.action, 'Demi plié 半蹲');
+    assert.match(context.standard_basis, /教材名称、版本及章节尚未确定/);
+    assert.match(context.biomechanics_boundary, /不能直接测量肌肉发力、关节载荷/);
+    assert.match(requests[2].messages[0].content, /uncertain必须为true/);
     assert.deepEqual(context.teacher_reference_metrics,referenceMetrics);
     assert.equal(context.teacher_demonstration_frames,1);
     assert.ok(context.available_evidence.includes('reference:knee_left'));

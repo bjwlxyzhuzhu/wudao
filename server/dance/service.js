@@ -4,14 +4,8 @@ import { one, all, run, tx, id, now, check, json, audit } from '../db.js';
 import { computeMetrics } from '../../public/dance/metrics.js';
 import { analyzeTraining, ROLES } from './analysis.js';
 
-export const ACTIONS = [
-  { key: 'first-position', title: '一位站姿', tag: '静态基准 · 身体轴线', view: 'front', description: '观察肩胯水平、躯干中立、双腿排列和站立稳定性。' },
-  { key: 'second-position', title: '二位站姿', tag: '静态基准 · 对称控制', view: 'front', description: '观察双侧对称、骨盆稳定、膝脚方向与重心分配。' },
-  { key: 'demi-plie', title: '蹲', tag: '核心慢速基训 · 下肢控制', view: 'front', description: '从准备到下蹲、还原，观察躯干稳定、膝脚方向与左右膝角变化。' },
-  { key: 'tendu', title: '擦地', tag: '核心慢速基训 · 腿部延伸', view: 'front', description: '观察支撑侧稳定、工作腿路径、膝部伸展和骨盆代偿线索。' },
-  { key: 'passe', title: '单腿蹲', tag: '单腿承重 · 平衡控制', view: 'front', description: '观察单腿支撑阶段的肩胯关系、膝髋排列与身体摆动。' },
-  { key: 'degage', title: '控制', tag: '单腿承重 · 动态控制', view: 'side', description: '观察支撑腿稳定、工作腿抬起路径、膝角和躯干姿态变化。' },
-];
+import { ACTIONS } from '../../public/dance/curriculum.js';
+export { ACTIONS };
 
 export function ensureDance(db) {
   db.exec('CREATE TABLE IF NOT EXISTS dance_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)');
@@ -75,7 +69,7 @@ export function createDanceService(db, dataDir) {
   const publicStandard = (standard) => {
     if (!standard) return null;
     const { checkpoints, reference_metrics_json, reference_keyframes_json, ...fields } = standard;
-    return { ...fields, checkpoints: json(checkpoints, []), reference_metrics: json(reference_metrics_json), reference_frame_count: json(reference_keyframes_json, []).length };
+    return { ...fields, archived_action: !ACTIONS.some(action => action.key === fields.action_key), checkpoints: json(checkpoints, []), reference_metrics: json(reference_metrics_json), reference_frame_count: json(reference_keyframes_json, []).length };
   };
   const removeVideo = (training) => {
     if (training.video_path) {
@@ -158,6 +152,7 @@ export function createDanceService(db, dataDir) {
       }
       const standard = one(db, 'SELECT * FROM dance_standards WHERE standard_id=? AND cohort=?', input.standard_id, profile.cohort);
       check(standard, 404, 'no_standard', '请等待老师发布动作标准');
+      check(ACTIONS.some(action => action.key === standard.action_key), 400, 'archived_action', '这是历史动作标准，保留查看与复核；新练习请使用教师重新发布的古典芭蕾标准。');
       const trainingId = id('train');
       run(db, `INSERT INTO dance_training(training_id,student_id,cohort,standard_id,status,idempotency_key,consent_teaching,consent_cloud,consent_video,created_at,updated_at) VALUES(?,?,?,?,'POSE_PENDING',?,1,?,?,?,?)`, trainingId, user.user_id, profile.cohort, standard.standard_id, requestKey, Number(input.consent_cloud === true), Number(input.consent_video === true), now(), now());
       return view(user, trainingId);

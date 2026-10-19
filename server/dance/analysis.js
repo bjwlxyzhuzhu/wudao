@@ -1,9 +1,10 @@
 import { chat, resolveProvider } from '../models.js';
 import { one } from '../db.js';
+import { ACTIONS, STANDARD_BASIS, BIOMECHANICS_BOUNDARY } from '../../public/dance/curriculum.js';
 
 export const ROLES = [
-  { id: 'a_basic', label: '基本功教练', focus: '仅依据已发布检查点分析动作控制、姿态和稳定性' },
-  { id: 'a_safety', label: '训练安全助手', focus: '只指出可见的失稳及需要教师现场确认的情况，不给医学诊断和训练剂量' },
+  { id: 'a_basic', label: '芭蕾基训导学助手', focus: '仅依据教师已发布检查点分析古典芭蕾动作控制、姿态与轨迹，给出可复练的教学建议；不得虚构教材依据' },
+  { id: 'a_safety', label: '训练生物力学风险助手', focus: '区分可见偏差与推测机制。可指出关节对位、失稳、疑似代偿线索，机制解释只能作待教师确认的可能性且uncertain必须为true。不能从视频确定发力肌群、发力点、异常关节载荷、力学传导路径或损伤概率，不给医学诊断和训练剂量' },
   { id: 'a_eval', label: '教学评价助手', focus: '说明哪些检查点有证据支持、哪些仍无法判断；不打总分' },
   { id: 'a_arbiter', label: '证据仲裁助手', focus: '按证据排序' },
 ];
@@ -52,7 +53,8 @@ export async function analyzeTraining(db, { standard, metrics, keyframes, consen
   for (const [name, metric] of Object.entries(referenceMetrics?.metrics || {})) if (!metric.uncertain && metric.value !== null) references.add(`reference:${name}`);
   referenceKeyframes.forEach((frame, index) => references.add(`standard_frame:${index + 1}`));
   keyframes.forEach((frame, index) => references.add(`frame:${index + 1}`));
-  const context = JSON.stringify({ standard: { title: standard.title, view: standard.view, instructions: standard.instructions, checkpoints: JSON.parse(standard.checkpoints) }, student_metrics: metrics, teacher_reference_metrics: referenceMetrics, teacher_demonstration_frames: referenceKeyframes.length, available_evidence: [...references] });
+  const curriculum = ACTIONS.find(action => action.key === standard.action_key);
+  const context = JSON.stringify({ standard: { title: standard.title, view: standard.view, instructions: standard.instructions, checkpoints: JSON.parse(standard.checkpoints) }, curriculum_context: curriculum ? { action: curriculum.title, observation_scope: curriculum.description, safety_boundary: curriculum.safety } : { note: '历史动作：只按本记录原标准分析，不映射为新版动作' }, standard_basis: STANDARD_BASIS, biomechanics_boundary: BIOMECHANICS_BOUNDARY, student_metrics: metrics, teacher_reference_metrics: referenceMetrics, teacher_demonstration_frames: referenceKeyframes.length, available_evidence: [...references] });
   const invoke = async (config, stage, system, messages) => {
     const started = Date.now();
     try {

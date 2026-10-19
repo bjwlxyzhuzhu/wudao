@@ -1,6 +1,6 @@
-# 舞智正姿 高校本科生芭蕾版更新指南
+# 舞衡智护 高校古典芭蕾版更新指南
 
-项目名称：舞智正姿——面向高校本科生的芭蕾基本功自主学习智能体。
+项目名称：舞衡智护——高校古典芭蕾基础训练导学与训练生物力学风险预警智能体。
 内部模块继续使用舞镜智练（动作学习）和舞安智护（训练安全）。
 
 ## 入口必须属于同一部署
@@ -13,16 +13,16 @@
 
 ## 升级网站
 
-将部署平台镜像更新为 `ghcr.io/bjwlxyzhuzhu/wudao:ballet-undergraduate-20261019`，拉取后重新部署，保留原有 `/app/data` 数据卷和运行时千问配置。仅重启旧容器不会拉取新版镜像；仅上传GitHub也不会自动替换外部托管网站。
+将部署平台镜像更新为 `ghcr.io/bjwlxyzhuzhu/wudao:wuheng-20261020`，拉取后重新部署，保留原有 `/app/data` 数据卷和运行时千问配置。仅重启旧容器不会拉取新版镜像；仅上传GitHub也不会自动替换外部托管网站。
 
-使用本仓库compose时，在服务器.env配置 `WUDA_IMAGE=ghcr.io/bjwlxyzhuzhu/wudao:ballet-undergraduate-20261019`，然后执行：
+使用本仓库compose时，在服务器.env配置 `WUDA_IMAGE=ghcr.io/bjwlxyzhuzhu/wudao:wuheng-20261020`，然后执行：
 
 ```sh
 docker compose pull
 docker compose up -d
 ```
 
-不要删除数据卷，也不要用干净源码包覆盖旧数据库。升级后刷新浏览器缓存，检查页面标题“舞智正姿”，并确认 `/js/dance-accounts.js` 返回JavaScript而不是404。
+不要删除数据卷，也不要用干净源码包覆盖旧数据库。升级后刷新浏览器缓存，检查页面标题“舞衡智护”，并确认 `/js/dance-accounts.js` 返回JavaScript而不是404。
 
 ## 修复旧后台添加的教师
 

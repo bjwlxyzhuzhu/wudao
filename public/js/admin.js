@@ -29,7 +29,7 @@ async function route() {
 function login() {
   $('#header').hidden = true; $('#shell').hidden = true;
   $('#login-root').innerHTML = `<div class="admin-login-wrap"><section class="admin-login">
-    <div class="admin-login-figure"><img src="/dance/mark.svg" alt=""><div><h1>舞智正姿</h1><p>让每一次练习看得见</p></div><span>账号 · 千问 · 训练审计</span></div>
+    <div class="admin-login-figure"><img src="/dance/mark.svg" alt=""><div><h1>舞衡智护</h1><p>让每一次练习看得见</p></div><span>账号 · 千问 · 训练审计</span></div>
     <form class="admin-login-panel" id="lf"><div class="login-tools"><div class="fs-switch" role="group" aria-label="字号"><button type="button" data-fs-set="m" title="标准字号">A</button><button type="button" data-fs-set="l" title="较大字号">A</button><button type="button" data-fs-set="xl" title="特大字号">A</button></div></div>
       <small>高校芭蕾学习管理中心</small><h2>管理员登录</h2><p>管理教师、学生账号与千问模型配置。</p>
       <label>登录名<input name="login" autocomplete="username" required placeholder="请输入管理员账号"></label>
@@ -48,7 +48,7 @@ async function changePw() {
 async function overview() {
   const { users } = await get('/api/admin/dance-users');
   const count = (role) => users.filter(u => u.role === role).length;
-  app.innerHTML = `<div class="toolbar"><h1>舞智正姿管理总览</h1></div><div class="kpis">${[['teacher','舞蹈教师'],['student','学生'],['medic','风险复核教师'],['admin','管理员']].map(([role,label])=>`<div class="kpi"><b>${count(role)}</b><span>${label}</span></div>`).join('')}</div><section class="panel"><h2>账号与班级</h2><p>已启用 ${users.filter(u=>u.status==='active').length} 个账号，${count('unassigned')} 个账号尚未开通舞蹈身份。</p><p>同班教师与学生使用相同班级编号。新账号首次登录需要修改临时密码。</p><a href="/admin/teachers">进入账号管理</a></section><section class="panel"><h2>教学流程</h2><p>教师发布动作标准 → 学生上传练习并授权分析 → 骨架和角度计算 → 千问视觉辅助解读 → 教师复核反馈。</p><p>在舞镜智练的模型配置入口确认视觉模型可用；云端分析需要学生授权。</p><a href="/wujing">打开舞镜智练</a></section>`;
+  app.innerHTML = `<div class="toolbar"><h1>舞衡智护管理总览</h1></div><div class="kpis">${[['teacher','舞蹈教师'],['student','学生'],['medic','风险复核教师'],['admin','管理员']].map(([role,label])=>`<div class="kpi"><b>${count(role)}</b><span>${label}</span></div>`).join('')}</div><section class="panel"><h2>账号与班级</h2><p>已启用 ${users.filter(u=>u.status==='active').length} 个账号，${count('unassigned')} 个账号尚未开通舞蹈身份。</p><p>同班教师与学生使用相同班级编号。新账号首次登录需要修改临时密码。</p><a href="/admin/teachers">进入账号管理</a></section><section class="panel"><h2>教学流程</h2><p>教师发布动作标准 → 学生上传练习并授权分析 → 骨架和角度计算 → 千问视觉辅助解读 → 教师复核反馈。</p><p>在舞镜智练的模型配置入口确认视觉模型可用；云端分析需要学生授权。</p><a href="/wujing">打开舞镜智练</a></section>`;
 }
 async function legacyOverview() {
   const o = await get('/api/admin/overview');
