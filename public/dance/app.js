@@ -252,6 +252,7 @@ function healthPage() {
 function render() {
   if (state.tab==='login') return login();
   if (!state.user) {state.tab='login';return login();}
+  if (state.user.must_change_password) return passwordPage();
   if (isRisk && state.tab!=='login') return healthPage();
   if(state.tab==='practice')return practice();
   if(state.tab==='standards')return standards();
@@ -262,9 +263,14 @@ function render() {
 
 async function refresh() {
   state.user=await api('GET','/me');
+  if(state.user.must_change_password)return;
   state.catalog=await api('GET','/catalog');
   if(state.user.role!=='medic')state.sessions=(await api('GET','/sessions')).sessions;
   if(isRisk&&state.user.role!=='teacher')state.health=await api('GET','/health');
+}
+
+function passwordPage() {
+  shell('<section class="panel"><h1>设置自己的登录密码</h1><p>首次登录或管理员重置密码后，请先修改临时密码。新密码需 8—128 位，同时包含字母和数字。</p><form id="dance-password-form"><label class="field">临时密码<input name="old_password" type="password" autocomplete="current-password" required></label><label class="field">新密码<input name="new_password" type="password" autocomplete="new-password" minlength="8" required></label><label class="field">确认新密码<input name="confirm_password" type="password" autocomplete="new-password" required></label><button type="submit">保存密码并进入平台</button></form></section>');
 }
 
 function wireReferenceVideo() {
@@ -350,7 +356,11 @@ root.addEventListener('submit',async(event)=>{
   if(submit)submit.disabled=true;
   const lines=(name)=>String(data.get(name)||'').split('\n').map((line)=>line.trim()).filter(Boolean);
   try{
-    if(form.id==='login-form'){
+    if(form.id==='dance-password-form'){
+      if(data.get('new_password')!==data.get('confirm_password'))throw new Error('两次输入的新密码不一致');
+      await api('POST','/auth/password',{old_password:data.get('old_password'),new_password:data.get('new_password')});
+      await refresh();state.tab=isRisk?'health':'home';render();toast('密码已更新');
+    }else if(form.id==='login-form'){
       await api('POST','/auth/login',{login:data.get('login'),password:data.get('password')});await refresh();state.tab=isRisk?'health':'home';render();
     }else if(form.id==='standard-form'){
       if(state.referenceFile&&!state.referencePose)throw new Error('请先提取新选择的示范视频参考数据');

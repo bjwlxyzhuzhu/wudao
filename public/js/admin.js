@@ -1,6 +1,7 @@
 // Admin console. Every action is authorised server-side (admin-scope session + is_admin).
 import { get, post, put, del, download } from './api.js';
 import { esc, $, $$, toast, fail, modal, confirmBox, formData, fmtTime } from './ui.js';
+import { danceAccounts } from './dance-accounts.js';
 
 const app = document.getElementById('app');
 let me = null;
@@ -45,6 +46,11 @@ async function changePw() {
 
 // ---------- 概览 ----------
 async function overview() {
+  const { users } = await get('/api/admin/dance-users');
+  const count = (role) => users.filter(u => u.role === role).length;
+  app.innerHTML = `<div class="toolbar"><h1>舞蹈平台管理总览</h1></div><div class="kpis">${[['teacher','舞蹈教师'],['student','学生'],['medic','风险复核教师'],['admin','管理员']].map(([role,label])=>`<div class="kpi"><b>${count(role)}</b><span>${label}</span></div>`).join('')}</div><section class="panel"><h2>账号与班级</h2><p>已启用 ${users.filter(u=>u.status==='active').length} 个账号，${count('unassigned')} 个账号尚未开通舞蹈身份。</p><p>同班教师与学生使用相同班级编号。新账号首次登录需要修改临时密码。</p><a href="/admin/teachers">进入账号管理</a></section><section class="panel"><h2>教学流程</h2><p>教师发布动作标准 → 学生上传练习并授权分析 → 骨架和角度计算 → 千问视觉辅助解读 → 教师复核反馈。</p><p>在舞镜智练的模型配置入口确认视觉模型可用；云端分析需要学生授权。</p><a href="/wujing">打开舞镜智练</a></section>`;
+}
+async function legacyOverview() {
   const o = await get('/api/admin/overview');
   app.innerHTML = `<div class="toolbar"><h1>概览</h1></div><div class="kpis">
     <div class="kpi"><b>${o.teachers}</b><span>教师账号（启用 ${o.active_teachers}）</span></div><div class="kpi"><b>${o.runs}</b><span>运行总数（进行中 ${o.running}）</span></div>
@@ -58,6 +64,9 @@ async function overview() {
 
 // ---------- 教师管理 ----------
 async function teachers() {
+  return danceAccounts(app);
+}
+async function legacyTeachers() {
   const q = new URLSearchParams(location.search).get('q') || '';
   const r = await get(`/api/admin/users?q=${encodeURIComponent(q)}`);
   app.innerHTML = `<div class="toolbar"><h1>账号管理</h1><input id="q" placeholder="搜索登录名/显示名/假名" value="${esc(q)}" style="width:240px"><button id="search">搜索</button><span class="grow"></span><button class="primary" id="add">创建管理账号</button></div>

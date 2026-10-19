@@ -24,6 +24,7 @@ import { BRAND, brandText, brandImage } from './brand.js';
 import { analyzeMaterials } from './knowledge.js';
 import { createDanceService } from './dance/service.js';
 import { bootstrapDanceDeployment } from './dance/bootstrap.js';
+import { listDanceUsers, createDanceUser, updateDanceUser } from './dance/accounts.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = join(ROOT, 'public');
@@ -286,6 +287,9 @@ export function createApp({ dataDir = process.env.YANZHI_DATA_DIR || join(ROOT, 
       model_status: models.resolveProvider(db).error || { code: 'ok' }, master_key_source: keySource,
     };
   });
+  route('GET', '/api/admin/dance-users', 'admin', ({ query }) => ({ users: listDanceUsers(db, query.q) }));
+  route('POST', '/api/admin/dance-users', 'admin', ({ user, body }) => createDanceUser(db, user, body));
+  route('POST', '/api/admin/dance-users/:id/profile', 'admin', ({ user, params, body }) => updateDanceUser(db, user, params.id, body));
   route('GET', '/api/admin/users', 'admin', ({ query }) => ({ users: auth.listUsers(db, query.q) }));
   route('POST', '/api/admin/users', 'admin', ({ user, body }) => {
     const temp = body.password || `Yz${randomUUID().replace(/-/g, '').slice(0, 8)}7`;

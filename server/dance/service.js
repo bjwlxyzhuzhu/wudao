@@ -64,7 +64,7 @@ export function createDanceService(db, dataDir) {
   const me = (user) => {
     const profile = one(db, 'SELECT * FROM dance_profiles WHERE user_id=?', user.user_id);
     check(profile, 403, 'no_dance_access', '该账号尚未开通舞蹈平台权限');
-    return { user_id: user.user_id, name: user.display_name, pseudonym: user.pseudonym, ...profile };
+    return { user_id: user.user_id, name: user.display_name, pseudonym: user.pseudonym, must_change_password: !!user.must_change_password, ...profile };
   };
   const requireRole = (user, roles) => { const profile = me(user); check(roles.includes(profile.role), 403, 'forbidden', '当前身份不能执行此操作'); return profile; };
   const owned = (user, trainingId) => {
